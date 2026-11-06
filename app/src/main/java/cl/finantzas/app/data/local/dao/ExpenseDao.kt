@@ -1,4 +1,4 @@
-﻿package cl.finantzas.app.data.local.dao
+package cl.finantzas.app.data.local.dao
 
 import androidx.room.*
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
@@ -23,4 +23,7 @@ interface ExpenseDao {
 
     @Query("SELECT COALESCE(SUM(monthly_impact_clp), 0) FROM expenses WHERE user_id = :userId")
     fun getTotalMonthlyImpactClp(userId: String): Flow<Long>
+
+    @Query("SELECT * FROM expenses WHERE user_id = :userId ORDER BY created_at ASC")
+    suspend fun getExpensesForSync(userId: String): List<ExpenseEntityClp>
 }

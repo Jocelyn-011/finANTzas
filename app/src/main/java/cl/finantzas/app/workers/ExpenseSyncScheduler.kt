@@ -1,6 +1,8 @@
 package cl.finantzas.app.workers
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import java.util.concurrent.TimeUnit
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -16,6 +18,7 @@ object ExpenseSyncScheduler {
 
         val request = OneTimeWorkRequestBuilder<ExpenseSyncWorker>()
             .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
