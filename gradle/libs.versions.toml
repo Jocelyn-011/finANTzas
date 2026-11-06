@@ -1,4 +1,6 @@
 [versions]
+sqlcipher = "4.6.1"
+securityCrypto = "1.1.0"
 room = "2.8.4"
 agp = "9.4.1"
 coreKtx = "1.10.1"
@@ -13,6 +15,9 @@ composeBom = "2026.02.01"
 navigationCompose = "2.10.2"
 
 [libraries]
+androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version = "2.6.2" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

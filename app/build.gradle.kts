@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -37,6 +37,9 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.sqlite.framework)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
