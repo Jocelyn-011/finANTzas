@@ -1,3 +1,4 @@
+
 -- ============================================================================
 -- SCRIPT DE BASE DE DATOS POSTGRESQL + SEGURIDAD ROW-LEVEL SECURITY (RLS)
 -- Moneda Oficial: Pesos Chilenos (CLP) sin decimales (Tipo entero BIGINT)
@@ -6,14 +7,20 @@
 -- Cumplimiento: Ley N° 21.719 (Protección de Datos), OWASP M3/M4 y Tríada CID
 -- ============================================================================
 
+BEGIN;
+
 -- 1. Tabla Principal de Gastos, Pagos Fijos y Suscripciones (Montos en CLP enteros)
 CREATE TABLE IF NOT EXISTS public.expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     concept VARCHAR(160) NOT NULL CHECK (char_length(trim(concept)) >= 2),
     unit_amount_clp BIGINT NOT NULL CHECK (unit_amount_clp > 0),
-    weekly_frequency INTEGER NOT NULL DEFAULT 1 CHECK (weekly_frequency >= 0), -- 0 = Mensual fijo (1 vez/mes), 1..7 = Veces por semana
-    expense_type VARCHAR(32) NOT NULL CHECK (expense_type IN ('PURCHASE', 'FIXED_PAYMENT', 'SUBSCRIPTION')),
+    weekly_frequency INTEGER NOT NULL DEFAULT 1
+        CHECK (weekly_frequency BETWEEN 0 AND 7),
+    -- 0 = Mensual fijo (1 vez/mes), 1..7 = Veces por semana
+    expense_type VARCHAR(32) NOT NULL CHECK (
+        expense_type IN ('PURCHASE', 'FIXED_PAYMENT', 'SUBSCRIPTION')
+    ),
     category VARCHAR(64) NOT NULL CHECK (category IN (
         'MICRO_PURCHASES_AND_SNACKS',
         'ENTERTAINMENT_SUBSCRIPTIONS',
@@ -45,37 +52,131 @@ CREATE TABLE IF NOT EXISTS public.category_budgets (
     UNIQUE(user_id, category)
 );
 
--- 3. Índices de Rendimiento para Analítica (< 100 ms en Sankey y Anillos de Jetpack Compose)
-CREATE INDEX IF NOT EXISTS idx_expenses_user_category ON public.expenses (user_id, category);
-CREATE INDEX IF NOT EXISTS idx_expenses_user_payment ON public.expenses (user_id, payment_method);
-CREATE INDEX IF NOT EXISTS idx_expenses_user_ant ON public.expenses (user_id, is_ant_expense);
+-- 3. Índices de Rendimiento para Analítica
+-- Optimizan consultas por usuario, categoría y medio de pago.
+-- No garantizan por sí solos tiempos inferiores a 100 ms.
 
--- 4. Vista Analítica para Porcentaje de Fuga por Medio de Pago en CLP sin decimales (Regla RN-04)
-CREATE OR REPLACE VIEW public.v_payment_method_leakage AS
-SELECT
-    user_id,
-    payment_method,
-    SUM(unit_amount_clp * CASE WHEN weekly_frequency = 0 THEN 1 ELSE weekly_frequency * 4 END)::BIGINT AS total_monthly_clp,
-    SUM(CASE WHEN is_ant_expense THEN unit_amount_clp * CASE WHEN weekly_frequency = 0 THEN 1 ELSE weekly_frequency * 4 END ELSE 0 END)::BIGINT AS ant_leakage_monthly_clp,
-    ROUND(
-        (SUM(CASE WHEN is_ant_expense THEN unit_amount_clp * CASE WHEN weekly_frequency = 0 THEN 1 ELSE weekly_frequency * 4 END ELSE 0 END)::NUMERIC
-        / NULLIF(SUM(unit_amount_clp * CASE WHEN weekly_frequency = 0 THEN 1 ELSE weekly_frequency * 4 END), 0)) * 100,
-    0)::INTEGER AS leakage_percentage
-FROM public.expenses
-GROUP BY user_id, payment_method;
+CREATE INDEX IF NOT EXISTS idx_expenses_user_category
+    ON public.expenses (user_id, category);
 
--- 5. Activación de Row-Level Security (Pilar de Confidencialidad CID)
+CREATE INDEX IF NOT EXISTS idx_expenses_user_payment
+    ON public.expenses (user_id, payment_method);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_user_ant
+    ON public.expenses (user_id, is_ant_expense);
+
+-- 4. Activación de Row-Level Security (Pilar de Confidencialidad CID)
+
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.category_budgets ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuario autoadministrador gestiona exclusivamente sus propios gastos en CLP"
+-- 5. Políticas RLS: cada usuario gestiona exclusivamente sus datos
+-- Se eliminan las políticas con estos nombres para permitir
+-- volver a ejecutar el script sin errores por duplicidad.
+
+DROP POLICY IF EXISTS
+    "Usuario autoadministrador gestiona exclusivamente sus propios gastos en CLP"
+    ON public.expenses;
+
+CREATE POLICY
+    "Usuario autoadministrador gestiona exclusivamente sus propios gastos en CLP"
     ON public.expenses
     FOR ALL
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    TO authenticated
+    USING ((SELECT auth.uid()) = user_id)
+    WITH CHECK ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Usuario autoadministrador gestiona exclusivamente sus propios presupuestos en CLP"
+DROP POLICY IF EXISTS
+    "Usuario autoadministrador gestiona exclusivamente sus propios presupuestos en CLP"
+    ON public.category_budgets;
+
+CREATE POLICY
+    "Usuario autoadministrador gestiona exclusivamente sus propios presupuestos en CLP"
     ON public.category_budgets
     FOR ALL
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    TO authenticated
+    USING ((SELECT auth.uid()) = user_id)
+    WITH CHECK ((SELECT auth.uid()) = user_id);
+
+-- 6. Vista Analítica para Porcentaje de Fuga por Medio de Pago
+-- Regla RN-04
+-- security_invoker = true permite respetar los permisos y RLS
+-- del usuario que consulta la vista (PostgreSQL 15+).
+
+CREATE OR REPLACE VIEW public.v_payment_method_leakage
+WITH (security_invoker = true) AS
+SELECT
+    user_id,
+    payment_method,
+
+    SUM(
+        unit_amount_clp *
+        CASE
+            WHEN weekly_frequency = 0 THEN 1
+            ELSE weekly_frequency * 4
+        END
+    )::BIGINT AS total_monthly_clp,
+
+    SUM(
+        CASE
+            WHEN is_ant_expense THEN
+                unit_amount_clp *
+                CASE
+                    WHEN weekly_frequency = 0 THEN 1
+                    ELSE weekly_frequency * 4
+                END
+            ELSE 0
+        END
+    )::BIGINT AS ant_leakage_monthly_clp,
+
+    ROUND(
+        (
+            SUM(
+                CASE
+                    WHEN is_ant_expense THEN
+                        unit_amount_clp *
+                        CASE
+                            WHEN weekly_frequency = 0 THEN 1
+                            ELSE weekly_frequency * 4
+                        END
+                    ELSE 0
+                END
+            )::NUMERIC
+            /
+            NULLIF(
+                SUM(
+                    unit_amount_clp *
+                    CASE
+                        WHEN weekly_frequency = 0 THEN 1
+                        ELSE weekly_frequency * 4
+                    END
+                ),
+                0
+            )
+        ) * 100,
+        0
+    )::INTEGER AS leakage_percentage
+
+FROM public.expenses
+WHERE user_id = (SELECT auth.uid())
+GROUP BY user_id, payment_method;
+
+-- 7. Permisos de acceso para usuarios autenticados
+-- Las políticas RLS siguen controlando qué filas son accesibles.
+
+REVOKE ALL ON TABLE public.expenses FROM PUBLIC, anon;
+REVOKE ALL ON TABLE public.category_budgets FROM PUBLIC, anon;
+REVOKE ALL ON TABLE public.v_payment_method_leakage FROM PUBLIC, anon;
+
+GRANT USAGE ON SCHEMA public TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON TABLE public.expenses TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON TABLE public.category_budgets TO authenticated;
+
+GRANT SELECT
+    ON TABLE public.v_payment_method_leakage TO authenticated;
+
+COMMIT;
