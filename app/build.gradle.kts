@@ -1,4 +1,4 @@
-import java.util.Properties
+﻿import java.util.Properties
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -84,4 +85,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
 
