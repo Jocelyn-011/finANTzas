@@ -1,4 +1,7 @@
 [versions]
+supabase = "3.2.3"
+ktor = "3.2.3"
+workManager = "2.10.5"
 sqlcipher = "4.6.1"
 securityCrypto = "1.1.0"
 room = "2.8.4"
@@ -15,6 +18,10 @@ composeBom = "2026.02.01"
 navigationCompose = "2.10.2"
 
 [libraries]
+supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt", version.ref = "supabase" }
+supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt", version.ref = "supabase" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version = "2.6.2" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
@@ -40,6 +47,7 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
 
 
 
