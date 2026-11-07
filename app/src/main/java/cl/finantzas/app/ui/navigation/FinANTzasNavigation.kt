@@ -30,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cl.finantzas.app.ui.components.KpiCards
+import cl.finantzas.app.ui.components.ExpenseDemoScreen
 import cl.finantzas.app.ui.theme.Petrol
 import androidx.compose.foundation.layout.RowScope
 
@@ -186,12 +187,7 @@ private fun PantallaRegistro() {
             color = Petrol
         )
 
-        KpiCards(
-            gastoMensual = 0L,
-            proyeccionAnual = 0L,
-            gastoHormiga = 0L,
-            ahorroPotencial = 0L
-        )
+        ExpenseDemoScreen()
     }
 }
 
