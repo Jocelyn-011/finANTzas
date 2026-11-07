@@ -24,6 +24,14 @@ interface ExpenseDao {
     @Query("SELECT COALESCE(SUM(monthly_impact_clp), 0) FROM expenses WHERE user_id = :userId")
     fun getTotalMonthlyImpactClp(userId: String): Flow<Long>
 
+    @Query("DELETE FROM expenses WHERE user_id = :userId AND id LIKE 'demo-%'")
+    suspend fun deleteDemoExpenses(userId: String)
+
+    @Transaction
+    suspend fun restoreDemoExpenses(userId: String, demoExpenses: List<ExpenseEntityClp>) {
+        deleteDemoExpenses(userId)
+        demoExpenses.forEach { insert(it) }
+    }
     @Query("SELECT * FROM expenses WHERE user_id = :userId ORDER BY created_at ASC")
     suspend fun getExpensesForSync(userId: String): List<ExpenseEntityClp>
 }

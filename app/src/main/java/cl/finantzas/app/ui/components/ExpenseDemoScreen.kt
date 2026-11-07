@@ -8,8 +8,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -24,13 +26,14 @@ private const val DEMO_USER_ID = "finantzas-demo-local"
 @Composable
 fun ExpenseDemoScreen() {
     val context = LocalContext.current.applicationContext
-    val repository = remember(context) {
-        RoomExpenseRepository(SecureDatabaseProvider.getDatabase(context).expenseDao())
-    }
+    val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
+    val repository = remember(dao) { RoomExpenseRepository(dao) }
     val viewModel = remember(repository) { ExpenseViewModel(repository, DEMO_USER_ID) }
     val expenses by viewModel.expenses.collectAsState()
     val totalMonthly by viewModel.totalMonthlyClp.collectAsState()
     val scope = rememberCoroutineScope()
+    var restoring by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     val antMonthly = expenses.filter { it.isAntExpense }.sumOf { it.monthlyImpactClp }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -42,11 +45,23 @@ fun ExpenseDemoScreen() {
         )
         Button(
             onClick = {
-                scope.launch {
-                    ExpenseDemoDataClp.create(DEMO_USER_ID).forEach { repository.insert(it) }
+                if (!restoring) {
+                    restoring = true
+                    error = null
+                    scope.launch {
+                        try {
+                            dao.restoreDemoExpenses(DEMO_USER_ID, ExpenseDemoDataClp.create(DEMO_USER_ID))
+                        } catch (e: Exception) {
+                            error = "No se pudieron restaurar los datos: ${e.message ?: "error desconocido"}"
+                        } finally {
+                            restoring = false
+                        }
+                    }
                 }
             },
+            enabled = !restoring,
             modifier = Modifier.fillMaxWidth()
-        ) { Text("Cargar datos de demostración") }
+        ) { Text(if (restoring) "Restaurando..." else "Restaurar datos de ejemplo") }
+        if (error != null) Text(error!!)
     }
 }
