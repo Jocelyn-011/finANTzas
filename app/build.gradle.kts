@@ -7,10 +7,10 @@ val localProperties = Properties().apply {
     }
 }
 plugins {
+    alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
-
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("dev.detekt")
 }
 
@@ -26,6 +26,16 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${localProperties.getProperty("SUPABASE_URL", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "\"${localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")}\""
+        )
 
         buildConfigField(
             "String",
@@ -58,7 +68,6 @@ android {
 }
 
 dependencies {
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
     implementation(libs.androidx.sqlite.framework)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.security.crypto)
@@ -86,7 +95,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-}
+
 
 detekt {
     config.setFrom(file("../config/detekt/detekt.yml"))
