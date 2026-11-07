@@ -1,4 +1,4 @@
-﻿import java.util.Properties
+import java.util.Properties
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -37,6 +37,16 @@ android {
             "\"${localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")}\""
         )
 
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${localProperties.getProperty("SUPABASE_URL", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "\"${localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")}\""
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

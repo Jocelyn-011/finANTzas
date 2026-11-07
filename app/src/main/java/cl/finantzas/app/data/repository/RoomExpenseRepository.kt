@@ -3,6 +3,7 @@ package cl.finantzas.app.data.repository
 import cl.finantzas.app.data.local.dao.ExpenseDao
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class RoomExpenseRepository(
     private val expenseDao: ExpenseDao
@@ -11,7 +12,7 @@ class RoomExpenseRepository(
     override fun getExpensesByUser(
         userId: String
     ): Flow<List<ExpenseEntityClp>> =
-        expenseDao.getExpensesByUser(userId)
+        expenseDao.getExpensesByUser(userId).distinctUntilChanged()
 
     override suspend fun getExpenseById(
         expenseId: String,
@@ -22,7 +23,7 @@ class RoomExpenseRepository(
     override fun getTotalMonthlyImpactClp(
         userId: String
     ): Flow<Long> =
-        expenseDao.getTotalMonthlyImpactClp(userId)
+        expenseDao.getTotalMonthlyImpactClp(userId).distinctUntilChanged()
 
     override suspend fun insert(expense: ExpenseEntityClp) {
         require(expense.unitAmountClp > 0L)
