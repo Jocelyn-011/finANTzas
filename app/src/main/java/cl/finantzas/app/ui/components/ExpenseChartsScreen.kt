@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -55,6 +58,8 @@ private fun instrumentFor(paymentMethod: String): PaymentInstrument = when (paym
     else -> PaymentInstrument.fromCode(paymentMethod)
 }
 
+private fun clp(value: Long): String = "$" + NumberFormat.getIntegerInstance(Locale("es", "CL")).format(value)
+
 @Composable
 fun ExpenseChartsScreen() {
     val context = LocalContext.current.applicationContext
@@ -72,6 +77,9 @@ fun ExpenseChartsScreen() {
     val paymentMethods = remember(expenses) {
         expenses.groupBy { instrumentFor(it.paymentMethod) }
             .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
+    val categories = remember(expenses) {
+        expenses.groupBy { it.category }
+            .mapValues { (_, items) -> items.sumOf { it.monthlyImpactClp } }
             .toList().sortedByDescending { it.second }
     }
     val chartTotal = categories.sumOf { it.second }
@@ -87,6 +95,7 @@ fun ExpenseChartsScreen() {
             leakagePercentage = if (total > 0L) ((ant * 100L) / total).toInt() else 0
         )
     }.sortedByDescending { it.leakagePercentage }
+    val consistent = chartTotal == roomTotal
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -188,6 +197,75 @@ private fun ChartCard(title: String, content: @Composable () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             content()
+        }
+    }
+}
+        Text("Distribucion de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Datos reactivos desde Room (CLP)", style = MaterialTheme.typography.bodySmall)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Anillo por categoria", style = MaterialTheme.typography.titleMedium)
+                if (chartTotal > 0L) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Canvas(modifier = Modifier.size(130.dp)) {
+                            val stroke = 24.dp.toPx()
+                            var start = -90f
+                            categories.forEachIndexed { index, pair ->
+                                val sweep = 360f * pair.second.toFloat() / chartTotal.toFloat()
+                                drawArc(chartColors[index % chartColors.size], start, sweep, false,
+                                    style = Stroke(width = stroke, cap = StrokeCap.Butt))
+                                start += sweep
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(clp(chartTotal), fontWeight = FontWeight.Bold)
+                            Text("Total mensual", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    categories.forEachIndexed { index, (name, amount) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(10.dp).background(chartColors[index % chartColors.size]))
+                            Spacer(Modifier.width(8.dp))
+                            Text("$name: ${clp(amount)}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                } else Text("No hay gastos registrados.")
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Flujo de gastos por categoria", style = MaterialTheme.typography.titleMedium)
+                Text("Vista proporcional tipo Sankey: total mensual hacia categorias", style = MaterialTheme.typography.bodySmall)
+                if (chartTotal > 0L) {
+                    Box(Modifier.fillMaxWidth().height(24.dp).background(MaterialTheme.colorScheme.primary))
+                    Text("Total: ${clp(chartTotal)}", style = MaterialTheme.typography.labelMedium)
+                    categories.forEachIndexed { index, (name, amount) ->
+                        val fraction = (amount.toDouble() / chartTotal.toDouble()).toFloat().coerceIn(0f, 1f)
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("$name - ${clp(amount)} (${String.format(Locale.US, "%.1f", fraction * 100f)}%)",
+                                style = MaterialTheme.typography.bodySmall)
+                            Box(Modifier.fillMaxWidth().height(16.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                Box(Modifier.fillMaxWidth(fraction).height(16.dp)
+                                    .background(chartColors[index % chartColors.size]))
+                            }
+                        }
+                    }
+                } else Text("No hay datos para representar.")
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Conciliacion Room / Graficos / KPIs", style = MaterialTheme.typography.titleMedium)
+                Text("Total Room (DAO): ${clp(roomTotal)}")
+                Text("Suma por categorias: ${clp(chartTotal)}")
+                Text("Proyeccion anual: ${clp(roomTotal * 12L)}")
+                Text("Gasto hormiga mensual: ${clp(antTotal)}")
+                Text("Ahorro potencial anual: ${clp(antTotal * 12L)}")
+                Text(if (consistent) "CONCILIACION OK: montos coinciden" else "REVISAR: montos no coinciden",
+                    color = if (consistent) Color(0xFF16784C) else MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold)
+                Text("Los datos se actualizan al modificar Room.", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

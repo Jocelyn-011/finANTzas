@@ -31,6 +31,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cl.finantzas.app.ui.components.ExpenseChartsScreen
 import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.components.KpiCards
+import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.components.ExpenseChartsScreen
 import cl.finantzas.app.ui.theme.Petrol
 
 private data class Pantalla(val ruta: String, val titulo: String, val icono: ImageVector)
@@ -71,6 +74,21 @@ fun FinANTzasNavigation() {
             composable("simulador") { PantallaTemporal("Simulador de Ahorro") }
             composable("alertas") { PantallaTemporal("Alertas y Presupuestos") }
             composable("nfc") { PantallaTemporal("Billetera NFC") }
+            composable("registro") {
+                PantallaRegistro()
+            }
+            composable("graficos") {
+                ExpenseChartsScreen()
+            }
+            composable("simulador") {
+                PantallaTemporal("Simulador de Ahorro")
+            }
+            composable("alertas") {
+                PantallaTemporal("Alertas y Presupuestos")
+            }
+            composable("nfc") {
+                PantallaTemporal("Billetera NFC")
+            }
         }
     }
 }
@@ -126,6 +144,15 @@ private fun RowScope.ItemNavegacion(pantalla: Pantalla, seleccionada: Boolean, o
 private fun PantallaRegistro() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Registro y Motor Hormiga", style = MaterialTheme.typography.titleLarge, color = Petrol)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Registro y Motor Hormiga",
+            style = MaterialTheme.typography.titleLarge,
+            color = Petrol
+        )
+
         ExpenseDemoScreen()
     }
 }

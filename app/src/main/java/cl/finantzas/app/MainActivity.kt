@@ -8,8 +8,10 @@ import cl.finantzas.app.ui.auth.AuthGate
 import cl.finantzas.app.ui.theme.FinANTzasTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             FinANTzasTheme {

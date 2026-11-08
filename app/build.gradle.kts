@@ -11,7 +11,10 @@ plugins {
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
+    
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -27,13 +30,22 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
+
+        // Configuracion de Supabase
+        buildConfigField(
+            "String",
+            "SUPABASE_URL",
+            "\"${localProperties.getProperty("SUPABASE_URL", "")}\""
+        )
+
         buildConfigField(
             "String",
             "SUPABASE_PUBLISHABLE_KEY",
             "\"${localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")}\""
         )
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        testInstrumentationRunner =
+            "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -54,6 +66,7 @@ android {
 }
 
 dependencies {
+
     implementation(libs.androidx.sqlite.framework)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.security.crypto)
@@ -61,10 +74,10 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.runtime.ktx)
-
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.okhttp)
+
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -83,15 +96,18 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+
+    // Pruebas instrumentadas
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 
+// Analisis estatico de calidad de codigo
 detekt {
     config.setFrom(file("../config/detekt/detekt.yml"))
     buildUponDefaultConfig = true
