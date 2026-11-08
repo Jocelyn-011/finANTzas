@@ -122,11 +122,10 @@ class AntExpenseRuleEngine(
     )
 ) {
     fun evaluate(candidate: ExpenseCandidate): AntExpenseVerdict {
-        val monthlyImpactClp = if (candidate.weeklyFrequency == FinancialThresholds.MONTHLY_FIXED_FREQUENCY_CODE) {
-            candidate.unitAmountClp
-        } else {
-            candidate.unitAmountClp * candidate.weeklyFrequency * FinancialThresholds.WEEKS_PER_MONTH_MULTIPLIER
-        }
+        val monthlyImpactClp = ClpImpactCalculator.monthlyImpactClp(
+            unitAmountClp = candidate.unitAmountClp,
+            weeklyFrequency = candidate.weeklyFrequency
+        )
 
         for (rule in rules) {
             val result = rule.evaluate(candidate)

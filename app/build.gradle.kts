@@ -4,12 +4,14 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
     id("org.jetbrains.kotlin.plugin.serialization")
     id("dev.detekt")
 }
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
+    
     if (file.exists()) {
         file.inputStream().use { load(it) }
     }
@@ -48,9 +50,7 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            optimization { enable = false }
         }
     }
 
@@ -67,23 +67,18 @@ android {
 
 dependencies {
 
-    // Base de datos local y seguridad
     implementation(libs.androidx.sqlite.framework)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
-    // Sincronizacion y tareas en segundo plano
     implementation(libs.androidx.work.runtime.ktx)
-
-    // Supabase y conectividad
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.okhttp)
 
-    // Jetpack Compose y Material Design 3
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -93,20 +88,21 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
 
-    // Android y ciclo de vida
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
-    // Pruebas unitarias
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Pruebas instrumentadas
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 
-    // Herramientas de depuracion
+
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
