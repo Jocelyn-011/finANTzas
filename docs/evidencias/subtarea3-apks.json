@@ -1,0 +1,16 @@
+[
+  {
+    "variant": "debug",
+    "path": "app\\build\\outputs\\apk\\debug\\app-debug.apk",
+    "bytes": 45924532,
+    "sha256": "8A7694017E3973089E827521FBCAB9E21B20FA7AD6CC2A2B64A09D5251425190",
+    "dex_files": 17
+  },
+  {
+    "variant": "release",
+    "path": "app\\build\\outputs\\apk\\release\\app-release-unsigned.apk",
+    "bytes": 24042317,
+    "sha256": "3794A78DA265E0149FF2DFE5506078942B296A898F8D93EFCE325CF53AFEBDBF",
+    "dex_files": 1
+  }
+]

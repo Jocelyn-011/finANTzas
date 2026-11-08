@@ -31,8 +31,8 @@ InMemoryExpenseRepository se conserva para compatibilidad con main; no sustituye
 | MASVS-STORAGE / CRYPTO, datos locales | SecureDatabaseProvider usa SupportOpenHelperFactory de SQLCipher y migracion 1 a 2 sin borrado destructivo | Pruebas instrumentadas de migracion, cifrado y persistencia indicadas abajo |
 | Gestion de clave | AndroidKeystoreVault: 32 bytes con SecureRandom, AES-256-GCM, IV generado por Cipher, clave maestra AndroidKeyStore, persistencia cifrada atomica | Prueba de estabilidad y clave no exportable; no se exige ni certifica hardware/StrongBox en todos los dispositivos |
 | Backup y transferencia | allowBackup=false; exclusiones explicitas de todos los dominios en cloud-backup y device-transfer, tambien formato anterior | Reglas revisadas; no se realizo restauracion en todos los fabricantes |
-| Red / TLS | Sin cleartext y confianza explicita solo en CAs del sistema; dependencia Ktor OkHttp y cliente Supabase compartido | No se realizo prueba MITM ni inspeccion del certificado del servidor |
-| MASVS-NETWORK-2, pinning | No hay CertificatePinner ni pin-set en las conexiones de autenticacion o PostgREST | PENDIENTE: propietario debe aportar host, pines SPKI actual/respaldo verificados y plan de rotacion; no se inventaron pines |
+| Red / TLS | HTTPS y confianza en CAs del sistema conservados; Ktor/OkHttp rechazo una cadena no confiable en loopback (test aprobado) | No se intercepto Supabase ni se inspecciono su certificado real; no es prueba de todos los escenarios TLS |
+| MASVS-NETWORK-2, pinning | No implementado por decision tecnica documentada para el endpoint gestionado actual | No se declara cumplimiento de NETWORK-2: si este control fuera obligatorio, sigue requiriendo pinning operativo o una excepcion formal aceptada |
 | Sesiones | AuthGate espera inicializacion y observa cambios de sesion; contrasena de formulario se limpia tras autenticar | El SessionManager por defecto del SDK no tiene cifrado configurado por la app. Proteccion de tokens en disco pendiente de verificar y remediar |
 | Autorizacion | Repositorios filtran usuario actual; presupuestos usan conflicto user_id/category y revisiones para conservar cambios pendientes | RLS existe en el esquema SQL versionado; politicas desplegadas y aislamiento remoto entre dos cuentas no comprobados |
 | Componentes | Solo launcher exportado por la app; sin permisos de almacenamiento/camara/localizacion nuevos | Componentes aportados por librerias revisados en el manifest del APK |
@@ -40,6 +40,118 @@ InMemoryExpenseRepository se conserva para compatibilidad con main; no sustituye
 
 No se declara aprobacion global OWASP MASVS. No se publico ni genero material de firma privado.
 No se imprimieron credenciales ni se modifico local.properties.
+
+## Subtarea 2: decision tecnica sobre pinning y prueba TLS aislada
+
+### Decision para el endpoint actual
+
+La configuracion inspeccionada utiliza un endpoint HTTPS gestionado de Supabase (`*.supabase.co`).
+No se publican el identificador del proyecto, claves ni tokens. El cliente compartido de Auth y PostgREST
+es Supabase SDK 3.2.3 sobre Ktor 3.2.3; el unico motor HTTP disponible es OkHttp, seleccionado mediante
+su proveedor de motor. No se configura CertificatePinner ni pin-set.
+
+Se conserva la validacion TLS ordinaria de la plataforma: cadena de confianza, vigencia del certificado
+y nombre del servidor. Manifest y Network Security Config mantienen cleartextTrafficPermitted=false,
+usesCleartextTraffic=false y trust-anchors limitados a `system`, sin TrustManager permisivo ni override
+de hostname. HTTPS y pinning son controles diferentes; la ausencia de pinning no desactiva TLS.
+
+Se decide no introducir pines para este endpoint gestionado en el alcance actual:
+
+1. El equipo configura el proyecto Supabase, pero no administra la clave privada TLS, la emision ni
+   la rotacion del certificado del servicio gestionado. No se ha proporcionado un compromiso operativo
+   del proveedor que garantice continuidad de claves SPKI y claves de respaldo bajo control del equipo.
+2. Fijar el certificado hoja o extraer un pin de una conexion puntual crearia una dependencia no
+   coordinada con el ciclo de actualizacion de la app. Una rotacion legitima podria bloquear registro,
+   login y sincronizacion, incluso manteniendose valido el certificado de la nueva cadena.
+3. Fijar una CA publica amplia no identifica exclusivamente el backend y tampoco elimina la necesidad
+   de gestionar cambios de cadena. No se inventan pines de respaldo ni se aceptan certificados invalidos.
+4. Android desaconseja el pinning general por su riesgo de incompatibilidad. Se mantiene PKI del sistema
+   y rechazo de certificados no confiables. Esta decision aplica al endpoint gestionado actual; debe
+   revisarse si cambia el dominio/proveedor, el modelo de amenazas o la exigencia contractual de pinning.
+
+Riesgo residual de la decision tecnica: se confia en la PKI del sistema; una cadena fraudulenta
+aceptada por una CA comprometida no seria rechazada por pines, porque no existen. El ensayo autofirmado
+no demuestra proteccion frente a ese escenario.
+
+MASVS-NETWORK-2 pide identity pinning para endpoints bajo control del desarrollador. Esta decision no
+constituye una aprobacion de dicho control ni una exencion automatica por usar Supabase: si se exige
+cumplimiento de NETWORK-2 para este endpoint, falta que el responsable de seguridad acepte formalmente
+la justificacion o proporcione un endpoint y claves gestionables, pines SPKI verificados de actual/respaldo,
+rotacion y pruebas. No se marca ninguna tarjeta de ClickUp desde esta auditoria.
+
+Fuentes: [Android: riesgos de pinning](https://developer.android.com/privacy-and-security/security-ssl#RestrictingTrust),
+[MASVS-NETWORK-2](https://mas.owasp.org/MASVS/controls/MASVS-NETWORK-2/),
+[Ktor: seleccion del motor](https://ktor.io/docs/client-engines.html).
+
+Ultima verificacion de almacenamiento ya ejecutada: 4 pruebas instrumentadas, 0 fallos/errores/omitidas,
+Pixel_6 Android 15 (API 35), registro JUnit 2026-11-08T17:54:15 UTC. Incluye KeystoreSecurityTest (1),
+BudgetPersistenceTest (2) y EncryptedExpensePerformanceTest (1). Maximo de insercion 30,11 ms frente
+al limite conservado de 50 ms. La repeticion de Keystore que figuraba pendiente en la evidencia
+historica anterior quedo resuelta en esta ejecucion. Evidencia: `docs/evidencias/subtarea2-almacenamiento.xml`.
+
+### Prueba controlada: alcance y estado
+
+Plan de prueba: servidor TLS efimero ligado exclusivamente a 127.0.0.1 y puerto asignado por el sistema;
+certificado autofirmado de prueba vigente y clave efimera independiente de la clave SQLCipher. Cliente
+nuevo Ktor/OkHttp con validadores TLS por defecto y la politica de red de la aplicacion, sin instanciar
+SupabaseProvider, enviar credenciales, instalar CAs ni contactar servicios externos.
+La evidencia debe mostrar SSLHandshakeException y causa de validacion de certificados; un timeout,
+rechazo TCP o error DNS no se aceptan como prueba de rechazo TLS. Los recursos se eliminan al terminar.
+El certificado de laboratorio no representa ni se incorpora al endpoint de produccion.
+
+Implementacion autorizada: `app/src/androidTest/java/cl/finantzas/app/data/repository/TlsCertificateValidationTest.kt`.
+No se agregaron dependencias ni se modificaron fuentes de produccion, manifest, Network Security Config,
+SupabaseProvider o certificados reales. El test crea una identidad EC efimera con un alias unico de
+laboratorio en AndroidKeyStore, sin exportar la clave y sin usar el alias de SQLCipher. Esta identidad
+sirve exclusivamente al servidor loopback: no se agrega a ningun almacen de confianza ni a la app.
+El certificado se comprueba vigente y con firma propia valida antes del ensayo. El cliente mantiene sus
+validadores por defecto y debe fallar por cadena no confiable (SSLHandshakeException con causa
+CertPathValidatorException), antes de poder aceptar una respuesta HTTP. Un fallo por nombre, timeout,
+DNS o conexion rechazada no satisface las aserciones. El servidor tambien debe observar el aborto TLS.
+Al terminar se cierran sockets, cliente y executor, se elimina la identidad efimera y se comprueba su ausencia.
+No se prueban aqui todos los casos de expiracion, hostname o MITM contra produccion.
+
+Resultado: APROBADO en Pixel_6 (AVD), Android 15/API 35. JUnit registra 1 prueba, 0 fallos,
+0 errores y 0 omitidas; caso JUnit de 4,655 s, timestamp 2026-11-08T19:05:09 UTC. Gradle: BUILD SUCCESSFUL en 2 min 11 s.
+Aserciones aprobadas: motor real OkHttp, certificado de laboratorio vigente y autofirmado correctamente,
+SSLHandshakeException con causa CertPathValidatorException, aborto observado por el servidor y
+eliminacion de la identidad efimera. Se distingue un rechazo criptografico de un fallo de conectividad.
+
+Comando reproducible en PowerShell:
+
+```powershell
+.\gradlew.bat :app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=cl.finantzas.app.data.repository.TlsCertificateValidationTest' --no-configuration-cache --console=plain --max-workers=1
+```
+
+Evidencia conservada:
+
+- [Resultado JUnit TLS](evidencias/tls-loopback.xml).
+- [Marcas filtradas del test](evidencias/tls-loopback.txt), sin datos de usuario, claves o tokens.
+- JUnit SHA-256: `4c01ba8f9be2eea2e6c0344aee5895c8cd395228c72a5bf7531106e7c58c3f63`.
+- Marcas SHA-256: `4e2427f497d339c7daf2414c6615eb30ad2f9651e17663392f441d10d23d4435`.
+- `TLS_AUDIT_RESULT=REJECTED_UNTRUSTED_CERTIFICATE`.
+- `TLS_AUDIT_ENGINE=Ktor_OkHttp_DEFAULT_TLS; ENDPOINT=LOOPBACK_ONLY`.
+- `TLS_AUDIT_CLEANUP=EPHEMERAL_IDENTITY_REMOVED; ROOT_CA_INSTALLED=false`.
+
+No se modificaron codigo productivo, cliente Supabase, certificados reales, configuracion Gradle,
+AndroidManifest ni Network Security Config. No se instalaron raices, no se desactivo validacion TLS
+y no se accedio a Room ni a datos financieros desde esta prueba. No se exporto material de clave.
+Los warnings de la opcion experimental de AGP, el objetivo JVM de las herramientas y Unsafe de protobuf
+no fueron fallos de la prueba. No se hizo commit ni push.
+
+### Conclusion de la subtarea 2
+
+Puede considerarse completada la verificacion tecnica solicitada: cifrado Room/SQLCipher y proteccion
+Keystore comprobados, transporte identificado, configuracion HTTPS revisada, rechazo TLS demostrado
+y decision de no implementar CertificatePinner para el endpoint gestionado justificada y registrada.
+No hay bloqueo tecnico pendiente en ese alcance y no se cambia el estado de ninguna tarjeta automaticamente.
+
+Esto NO significa que CertificatePinner este implementado ni que MASVS-NETWORK-2 se haya aprobado.
+Si el criterio de aceptacion del proyecto exige expresamente pinning, ese control sigue no implementado
+y la justificacion no sustituye su cumplimiento: faltarian pines gestionables/verificados y rotacion,
+o la aceptacion formal de la decision por el responsable del alcance. Tampoco se afirma aprobacion
+MASVS global ni prueba funcional conjunta del release firmado.
+
 
 ## Evidencia de ejecucion
 
@@ -64,9 +176,60 @@ No se imprimieron credenciales ni se modifico local.properties.
 - Evidencia conservada de Detekt: `docs/evidencias/detekt.xml` y `docs/evidencias/detekt-debug.xml`.
 - Validacion final sin dispositivo: `:app:detekt :app:detektDebug :app:testDebugUnitTest :app:assembleRelease --continue --max-workers=2`: BUILD SUCCESSFUL. Sin errores de resolucion de tipos ni warning de resolucion anticipada de debugCompileClasspath.
 - La prueba Keystore se ajusto para que una comparacion fallida no imprima bytes de la clave. Compilo correctamente. La suite completa anterior (5/5) esta conservada, pero la reejecucion aislada posterior NO se valida: Gradle/ADB agoto el tiempo consultando propiedades y reporto Unknown API Level en dos intentos. ADB directo reporto Process crashed y el evento de sistema indico bg anr; no se atribuye causa al codigo sin mas evidencia.
-- Pendiente imprescindible: estabilizar/reiniciar el emulador con el equipo y repetir KeystoreSecurityTest. No se reinicio, borro ni restauro el dispositivo automaticamente.
+- Historico, resuelto en la verificacion de almacenamiento 17:54:15 UTC indicada en subtarea 2: el emulador habia bloqueado la repeticion de Keystore. No se reinicio, borro ni restauro automaticamente.
 - Comando de repeticion: `./gradlew.bat :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=cl.finantzas.app.data.repository.KeystoreSecurityTest`.
 - Archivos principales: configuracion Gradle/catalogo y reglas release; manifest/XML de seguridad; autenticacion, worker y funciones de tarjetas; prueba Keystore y evidencias. Cambios adicionales corresponden a integracion de main y correcciones de Detekt.
+
+## Subtarea 3: APK debug instalable y release con R8
+
+Se verifico `optimization { enable = true }` en release (DSL AGP 9.4). El artefacto anterior,
+el mapping y la configuracion efectiva demuestran ofuscacion y ausencia de dontshrink/dontoptimize/dontobfuscate.
+Nueva comprobacion: `:app:assembleDebug :app:assembleRelease --console=plain --max-workers=1`,
+BUILD SUCCESSFUL en 12 s; `minifyReleaseWithR8` UP-TO-DATE y ambos assemble satisfactorios.
+No se forzo recompilacion de R8 ni se modificaron funcionalidades o configuraciones.
+
+| Propiedad | Debug utilizado en el emulador | Release optimizado |
+| --- | --- | --- |
+| Archivo | app/build/outputs/apk/debug/app-debug.apk | app/build/outputs/apk/release/app-release-unsigned.apk |
+| Tamano | 45.924.532 bytes | 24.042.317 bytes |
+| DEX | 17 | 1 |
+| R8 | No habilitado por la configuracion debug existente | Activo en release |
+| Firma | Debug existente, valida (v2) | Sin firma de release configurada |
+| Instalable en esta verificacion | Si: instalacion -r exitosa | No se instalo ni se presenta como APK firmado |
+| Depuracion | debuggable=true | debuggable no habilitado |
+
+`signingReport` confirma el keystore debug existente (`~/.android/debug.keystore`, AndroidDebugKey)
+y release sin signingConfig. No se creo keystore de release, certificados ni nuevas claves de firma.
+Se conservaron allowBackup=false, usesCleartextTraffic=false y Network Security Config en ambos manifest binarios.
+Los SHA-256 actuales y metadatos estan en [subtarea3-apks.json](evidencias/subtarea3-apks.json).
+El hash del release aqui es una nueva captura del artefacto empaquetado; los hashes anteriores del informe
+pertenecen a las verificaciones historicas y no se sustituyen como si fueran el mismo archivo.
+El debug permite validar funcionamiento, pero no demuestra por si mismo el comportamiento despues de R8.
+SHA-256 del debug entregable: `8A7694017E3973089E827521FBCAB9E21B20FA7AD6CC2A2B64A09D5251425190`.
+SHA-256 del release verificado ahora: `3794A78DA265E0149FF2DFE5506078942B296A898F8D93EFCE325CF53AFEBDBF`.
+
+### Instalacion y arranque
+
+Pixel_6, Android 15/API 35: `adb install -r` devolvio Success. No se uso uninstall, pm clear, wipe ni
+restauracion de datos. El paquete no tenia ruta instalada antes de este paso; no se infiere que el resto
+del emulador estuviera vacio. Se conserva cualquier dato existente mediante la instalacion con -r.
+`am start -W` devolvio Status: ok, LaunchState: COLD, TotalTime 25.913 ms y WaitTime 26.248 ms.
+Se comprobo MainActivity en primer plano y proceso activo, con la pantalla de inicio de sesion visible.
+Estos tiempos son mediciones observadas, no una aprobacion de rendimiento.
+Evidencia sin campos ni credenciales: [subtarea3-arranque.txt](evidencias/subtarea3-arranque.txt).
+
+### Prueba funcional y cierre
+
+Estado actual: pendiente de sesion autenticada. Se solicito iniciar sesion directamente en el emulador
+con una cuenta de pruebas, sin compartir la contrasena. No se elude AuthGate ni se extraen tokens.
+Mientras no haya sesion, no se dan por probadas las pestanas internas, el registro de gastos ni la edicion
+de presupuestos. No se ejecutan pruebas instrumentadas que puedan desinstalar la app despues de esta instalacion.
+Comprobacion final de UI: continuan visibles Iniciar sesion e Ingresar; Registro/Alertas no estan accesibles.
+No se registraron gastos ni se editaron presupuestos. No se sustituyen estos pasos por pruebas antiguas
+ni por acceso directo a componentes que omita la autenticacion.
+La generacion e instalacion debug y la comprobacion de R8 estan completas; el cierre de toda la subtarea 3
+queda pendiente del ensayo funcional autenticado. No se marca ninguna tarjeta ni se afirma conformidad
+con criterios adicionales de una pauta PRO403 que no haya sido proporcionada.
 
 ## Checklist para Jocelyn y Alvaro
 

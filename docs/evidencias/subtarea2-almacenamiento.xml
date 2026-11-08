@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="4" failures="0" errors="0" skipped="0" time="0.000" timestamp="2026-11-08T17:54:15" hostname="localhost">
+  <testsuite name="cl.finantzas.app.data.repository.BudgetPersistenceTest" tests="2" failures="0" errors="0" skipped="0" time="3.262" timestamp="2026-11-08T17:54:15" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="expenseInsertUpdatesBudgetStateWithoutRestart" classname="cl.finantzas.app.data.repository.BudgetPersistenceTest" time="1.025" />
+    <testcase name="encryptedBudgetsPersistAndPendingEditsSurviveRemoteMerge" classname="cl.finantzas.app.data.repository.BudgetPersistenceTest" time="2.237" />
+  </testsuite>
+  <testsuite name="cl.finantzas.app.data.repository.EncryptedExpensePerformanceTest" tests="1" failures="0" errors="0" skipped="0" time="2.207" timestamp="2026-11-08T17:54:15" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="encryptedExpenseWritesUnder50ms" classname="cl.finantzas.app.data.repository.EncryptedExpensePerformanceTest" time="2.207" />
+  </testsuite>
+  <testsuite name="cl.finantzas.app.data.repository.KeystoreSecurityTest" tests="1" failures="0" errors="0" skipped="0" time="0.000" timestamp="2026-11-08T17:54:15" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="passphraseIsStableAndMasterKeyIsNotExportable" classname="cl.finantzas.app.data.repository.KeystoreSecurityTest" time="0.000" />
+  </testsuite>
+</testsuites>
