@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="0" errors="0" skipped="0" time="0.000" timestamp="2026-11-08T19:05:09" hostname="localhost">
+  <testsuite name="cl.finantzas.app.data.repository.TlsCertificateValidationTest" tests="1" failures="0" errors="0" skipped="0" time="4.655" timestamp="2026-11-08T19:05:09" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="defaultOkHttpEngineRejectsUntrustedLoopbackCertificate" classname="cl.finantzas.app.data.repository.TlsCertificateValidationTest" time="4.655" />
+  </testsuite>
+</testsuites>

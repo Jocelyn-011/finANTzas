@@ -9,8 +9,7 @@ class ExpenseRemoteRepository {
     private val client = SupabaseProvider.client
 
     suspend fun uploadExpenses(expenses: List<ExpenseEntityClp>): Int {
-        val user = client.auth.currentUserOrNull()
-            ?: throw IllegalStateException("No hay usuario autenticado")
+        val user = checkNotNull(client.auth.currentUserOrNull()) { "No hay usuario autenticado" }
 
         val ownExpenses = expenses.filter { it.userId == user.id }
 

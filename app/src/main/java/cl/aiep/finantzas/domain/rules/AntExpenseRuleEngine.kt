@@ -87,7 +87,8 @@ class MicroTransactionFrequencyRule : AntExpenseRule {
             return Triple(
                 true,
                 "RN-02",
-                "Micro-compra frecuente que supera el límite semanal de ${FinancialThresholds.MAX_WEEKLY_MICRO_TX_FREQUENCY} veces"
+                "Micro-compra frecuente que supera el límite semanal de " +
+                    "${FinancialThresholds.MAX_WEEKLY_MICRO_TX_FREQUENCY} veces"
             )
         }
         return null

@@ -37,7 +37,7 @@ class FinancialAnalyticsCalculatorTest {
     }
 
     @Test
-    fun `cumple principio LSP procesando polimorficamente subtipos de PaymentInstrument y ordenando ranking descendentemente`() {
+    fun `cumple principio LSP procesando polimorficamente subtipos de PaymentInstrument y ordenando ranking`() {
         // 1. Tarjeta de Crédito: 100% de fuga (todo gasto hormiga)
         val creditLeak = FinancialAnalyticsCalculator.calculatePaymentMethodLeakage(
             instrument = PaymentInstrument.CreditCard,

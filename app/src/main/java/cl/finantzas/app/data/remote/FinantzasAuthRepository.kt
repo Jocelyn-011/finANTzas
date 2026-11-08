@@ -5,11 +5,13 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 
 class FinantzasAuthRepository {
 
+    private companion object { const val MIN_PASSWORD_LENGTH = 8 }
+
     private val auth = SupabaseProvider.client.auth
 
     suspend fun register(email: String, password: String) {
         require(email.isNotBlank()) { "Ingresa tu correo" }
-        require(password.length >= 8) {
+        require(password.length >= MIN_PASSWORD_LENGTH) {
             "La contraseña debe tener al menos 8 caracteres"
         }
 

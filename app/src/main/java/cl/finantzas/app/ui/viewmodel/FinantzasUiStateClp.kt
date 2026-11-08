@@ -17,7 +17,7 @@ data class EvaluatedExpenseClp(
  * Estado inmutable de la pantalla principal de finANTzas.
  *
  * Cada cambio genera una copia nueva (copy) y nunca se modifica en el lugar,
- * así la UI siempre recibe una "foto" consistente del estado (UDF).
+ * asÃ­ la UI siempre recibe una "foto" consistente del estado (UDF).
  */
 data class FinantzasUiStateClp(
     val expenses: List<EvaluatedExpenseClp> = emptyList(),
@@ -27,4 +27,3 @@ data class FinantzasUiStateClp(
     val antAnnualImpactClp: Long = 0L,
     val errorMessage: String? = null
 )
-

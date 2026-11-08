@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -37,17 +33,23 @@ import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import cl.aiep.finantzas.domain.rules.PaymentInstrument
-import cl.aiep.finantzas.domain.rules.PaymentMethodLeakageResult
-import java.text.NumberFormat
+import cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculator
+import cl.aiep.finantzas.domain.rules.ClpCurrencyFormatter
 import java.util.Locale
 
-private const val CHART_DEMO_USER = "finantzas-demo-local"
+private const val FULL_CIRCLE = 360f
+private const val START_ANGLE = -90f
+private const val PERCENT = 100f
+private const val MONTHS_PER_YEAR = 12L
+private const val LABEL_LENGTH = 20
+
+private val consistentColor = Color(0xFF16784C)
+
 private val chartColors = listOf(
     Color(0xFF008577), Color(0xFFEF8C35), Color(0xFF5D68C4),
     Color(0xFFE15F73), Color(0xFF7B8A8B), Color(0xFF6D9F4A)
 )
-
-private fun clp(value: Long): String = "$" + NumberFormat.getIntegerInstance(Locale("es", "CL")).format(value)
+private fun clp(value: Long): String = ClpCurrencyFormatter.formatClp(value)
 
 private fun instrumentFor(paymentMethod: String): PaymentInstrument = when (paymentMethod.trim().uppercase()) {
     "CREDIT_CARD", "CREDIT" -> PaymentInstrument.CreditCard
@@ -58,98 +60,167 @@ private fun instrumentFor(paymentMethod: String): PaymentInstrument = when (paym
     else -> PaymentInstrument.fromCode(paymentMethod)
 }
 
-private fun clp(value: Long): String = "$" + NumberFormat.getIntegerInstance(Locale("es", "CL")).format(value)
 
 @Composable
 fun ExpenseChartsScreen() {
+    val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
     val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val viewModel = remember(repository) { ExpenseViewModel(repository, CHART_DEMO_USER) }
+    val viewModel = remember(repository, userId) { ExpenseViewModel(repository, userId) }
     val expenses by viewModel.expenses.collectAsState()
     val roomTotal by viewModel.totalMonthlyClp.collectAsState()
-
-    val categories = remember(expenses) {
-        expenses.groupBy { it.category }
-            .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
-            .toList().sortedByDescending { it.second }
-    }
-    val paymentMethods = remember(expenses) {
-        expenses.groupBy { instrumentFor(it.paymentMethod) }
-            .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
     val categories = remember(expenses) {
         expenses.groupBy { it.category }
             .mapValues { (_, items) -> items.sumOf { it.monthlyImpactClp } }
             .toList().sortedByDescending { it.second }
     }
+    val paymentMethods = remember(expenses) {
+        expenses.groupBy { instrumentFor(it.paymentMethod) }
+            .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
+    }
+    val leakageRanking = remember(expenses) {
+        paymentMethods.map { (instrument, total) ->
+            val ant = expenses.filter { instrumentFor(it.paymentMethod) == instrument && it.isAntExpense }
+                .sumOf { it.monthlyImpactClp }
+            FinancialAnalyticsCalculator.calculatePaymentMethodLeakage(instrument, total, ant)
+        }.sortedByDescending { it.leakagePercentage }
+    }
     val chartTotal = categories.sumOf { it.second }
     val antTotal = expenses.filter { it.isAntExpense }.sumOf { it.monthlyImpactClp }
-    val leakageRanking = paymentMethods.map { (instrument, total) ->
-        val ant = expenses.asSequence()
-            .filter { instrumentFor(it.paymentMethod) == instrument && it.isAntExpense }
-            .sumOf { it.monthlyImpactClp }
-        PaymentMethodLeakageResult(
-            instrument = instrument,
-            totalExpenseAmountClp = total,
-            antExpenseAmountClp = ant,
-            leakagePercentage = if (total > 0L) ((ant * 100L) / total).toInt() else 0
-        )
-    }.sortedByDescending { it.leakagePercentage }
-    val consistent = chartTotal == roomTotal
-
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Distribución de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Distribucion de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text("Datos reactivos desde Room (CLP)", style = MaterialTheme.typography.bodySmall)
+        CategoryDonutCard(categories, chartTotal)
+        PaymentCards(paymentMethods.toList(), leakageRanking)
+        CategoryFlowCard(categories, chartTotal)
+        ReconciliationCard(roomTotal, chartTotal, antTotal)
+    }
+}
 
-        ChartCard("Anillo por categoría") {
+@Composable
+private fun CategoryDonutCard(
+    categories: List<Pair<String, Long>>,
+    chartTotal: Long
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Anillo por categoria", style = MaterialTheme.typography.titleMedium)
             if (chartTotal > 0L) {
-                DonutChart(
-                    amounts = categories.map { it.second },
-                    labels = categories.map { it.first },
-                    colors = chartColors
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    Canvas(modifier = Modifier.size(130.dp)) {
+                        val stroke = 24.dp.toPx()
+                        var start = START_ANGLE
+                        categories.forEachIndexed { index, pair ->
+                            val sweep = FULL_CIRCLE * pair.second.toFloat() / chartTotal.toFloat()
+                            drawArc(chartColors[index % chartColors.size], start, sweep, false,
+                                style = Stroke(width = stroke, cap = StrokeCap.Butt))
+                            start += sweep
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(clp(chartTotal), fontWeight = FontWeight.Bold)
+                        Text("Total mensual", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 categories.forEachIndexed { index, (name, amount) ->
-                    LegendRow(chartColors[index % chartColors.size], "$name: ${clp(amount)}")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(10.dp).background(chartColors[index % chartColors.size]))
+                        Spacer(Modifier.width(8.dp))
+                        Text("$name: ${clp(amount)}", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             } else Text("No hay gastos registrados.")
         }
+    }
+}
 
-        ChartCard("Anillo por medio de pago") {
-            if (paymentMethods.isNotEmpty()) {
-                DonutChart(
-                    amounts = paymentMethods.map { it.second },
-                    labels = paymentMethods.map { it.first.displayName },
-                    colors = chartColors
-                )
-            } else Text("No hay gastos registrados.")
-        }
-
-        ChartCard("Fuga por medio de pago (RN-04)") {
-            if (leakageRanking.isEmpty()) Text("No hay datos para representar.")
-            leakageRanking.forEach { row ->
-                Text(
-                    "${row.instrument.displayName}: ${row.leakagePercentage}% · " +
-                        "${clp(row.antExpenseAmountClp)} de ${clp(row.totalExpenseAmountClp)}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-
-        ChartCard("Conciliación y KPIs") {
-            Text("Total Room (DAO): ${clp(roomTotal)}")
-            Text("Suma por categorías: ${clp(chartTotal)}")
-            Text("Proyección anual: ${clp(roomTotal * 12L)}")
-            Text("Gasto hormiga mensual: ${clp(antTotal)}")
-            Text("Ahorro potencial anual: ${clp(antTotal * 12L)}")
-            val consistent = chartTotal == roomTotal
-            Text(
-                if (consistent) "CONCILIACIÓN OK" else "REVISAR: montos no coinciden",
-                color = if (consistent) Color(0xFF16784C) else MaterialTheme.colorScheme.error,
-                fontWeight = FontWeight.Bold
+@Composable
+private fun PaymentCards(
+    paymentMethods: List<Pair<PaymentInstrument, Long>>,
+    leakageRanking: List<cl.aiep.finantzas.domain.rules.PaymentMethodLeakageResult>
+) {
+    ChartCard("Anillo por medio de pago") {
+        if (paymentMethods.isNotEmpty()) {
+            DonutChart(
+                amounts = paymentMethods.map { it.second },
+                labels = paymentMethods.map { it.first.displayName },
+                colors = chartColors
             )
+        } else Text("No hay gastos registrados.")
+    }
+
+    ChartCard("Fuga por medio de pago (RN-04)") {
+        if (leakageRanking.isEmpty()) Text("No hay datos para representar.")
+        leakageRanking.forEach { row ->
+            Text(
+                "${row.instrument.displayName}: ${row.leakagePercentage}% · " +
+                    "${clp(row.antExpenseAmountClp)} de ${clp(row.totalExpenseAmountClp)}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryFlowCard(
+    categories: List<Pair<String, Long>>,
+    chartTotal: Long
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Flujo de gastos por categoria", style = MaterialTheme.typography.titleMedium)
+            Text(
+            "Vista proporcional tipo Sankey: total mensual hacia categorias",
+            style = MaterialTheme.typography.bodySmall
+        )
+            if (chartTotal > 0L) {
+                Box(Modifier.fillMaxWidth().height(24.dp).background(MaterialTheme.colorScheme.primary))
+                Text("Total: ${clp(chartTotal)}", style = MaterialTheme.typography.labelMedium)
+                categories.forEachIndexed { index, (name, amount) ->
+                    val fraction = (amount.toDouble() / chartTotal.toDouble()).toFloat().coerceIn(0f, 1f)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("$name - ${clp(amount)} (${String.format(Locale.US, "%.1f", fraction * PERCENT)}%)",
+                            style = MaterialTheme.typography.bodySmall)
+                        Box(
+                        Modifier.fillMaxWidth().height(16.dp).background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                            Box(Modifier.fillMaxWidth(fraction).height(16.dp)
+                                .background(chartColors[index % chartColors.size]))
+                        }
+                    }
+                }
+            } else Text("No hay datos para representar.")
+        }
+    }
+
+}
+
+@Composable
+private fun ReconciliationCard(
+    roomTotal: Long,
+    chartTotal: Long,
+    antTotal: Long
+) {
+    val consistent = chartTotal == roomTotal
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Conciliacion Room / Graficos / KPIs", style = MaterialTheme.typography.titleMedium)
+            Text("Total Room (DAO): ${clp(roomTotal)}")
+            Text("Suma por categorias: ${clp(chartTotal)}")
+            Text("Proyeccion anual: ${clp(roomTotal * MONTHS_PER_YEAR)}")
+            Text("Gasto hormiga mensual: ${clp(antTotal)}")
+            Text("Ahorro potencial anual: ${clp(antTotal * MONTHS_PER_YEAR)}")
+            Text(if (consistent) "CONCILIACION OK: montos coinciden" else "REVISAR: montos no coinciden",
+                color = if (consistent) consistentColor else MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Bold)
+            Text("Los datos se actualizan al modificar Room.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -159,9 +230,9 @@ private fun DonutChart(amounts: List<Long>, labels: List<String>, colors: List<C
     val total = amounts.sumOf { it }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Canvas(Modifier.size(132.dp)) {
-            var start = -90f
+            var start = START_ANGLE
             amounts.forEachIndexed { index, amount ->
-                val sweep = if (total > 0L) 360f * amount.toFloat() / total.toFloat() else 0f
+                val sweep = if (total > 0L) FULL_CIRCLE * amount.toFloat() / total.toFloat() else 0f
                 drawArc(
                     color = colors[index % colors.size],
                     startAngle = start,
@@ -176,18 +247,10 @@ private fun DonutChart(amounts: List<Long>, labels: List<String>, colors: List<C
             Text(clp(total), fontWeight = FontWeight.Bold)
             Text("Mensual", style = MaterialTheme.typography.bodySmall)
             labels.forEachIndexed { index, label ->
-                Text("${label.take(20)} · ${amounts[index].toFloat().div(total.coerceAtLeast(1L)).times(100).toInt()}%")
+                val percentage = amounts[index].toFloat().div(total.coerceAtLeast(1L)).times(PERCENT).toInt()
+                Text("${label.take(LABEL_LENGTH)} \u00b7 $percentage%")
             }
         }
-    }
-}
-
-@Composable
-private fun LegendRow(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
-        Spacer(Modifier.size(8.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -197,75 +260,6 @@ private fun ChartCard(title: String, content: @Composable () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             content()
-        }
-    }
-}
-        Text("Distribucion de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text("Datos reactivos desde Room (CLP)", style = MaterialTheme.typography.bodySmall)
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Anillo por categoria", style = MaterialTheme.typography.titleMedium)
-                if (chartTotal > 0L) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Canvas(modifier = Modifier.size(130.dp)) {
-                            val stroke = 24.dp.toPx()
-                            var start = -90f
-                            categories.forEachIndexed { index, pair ->
-                                val sweep = 360f * pair.second.toFloat() / chartTotal.toFloat()
-                                drawArc(chartColors[index % chartColors.size], start, sweep, false,
-                                    style = Stroke(width = stroke, cap = StrokeCap.Butt))
-                                start += sweep
-                            }
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(clp(chartTotal), fontWeight = FontWeight.Bold)
-                            Text("Total mensual", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    categories.forEachIndexed { index, (name, amount) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(10.dp).background(chartColors[index % chartColors.size]))
-                            Spacer(Modifier.width(8.dp))
-                            Text("$name: ${clp(amount)}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                } else Text("No hay gastos registrados.")
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Flujo de gastos por categoria", style = MaterialTheme.typography.titleMedium)
-                Text("Vista proporcional tipo Sankey: total mensual hacia categorias", style = MaterialTheme.typography.bodySmall)
-                if (chartTotal > 0L) {
-                    Box(Modifier.fillMaxWidth().height(24.dp).background(MaterialTheme.colorScheme.primary))
-                    Text("Total: ${clp(chartTotal)}", style = MaterialTheme.typography.labelMedium)
-                    categories.forEachIndexed { index, (name, amount) ->
-                        val fraction = (amount.toDouble() / chartTotal.toDouble()).toFloat().coerceIn(0f, 1f)
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("$name - ${clp(amount)} (${String.format(Locale.US, "%.1f", fraction * 100f)}%)",
-                                style = MaterialTheme.typography.bodySmall)
-                            Box(Modifier.fillMaxWidth().height(16.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                Box(Modifier.fillMaxWidth(fraction).height(16.dp)
-                                    .background(chartColors[index % chartColors.size]))
-                            }
-                        }
-                    }
-                } else Text("No hay datos para representar.")
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Conciliacion Room / Graficos / KPIs", style = MaterialTheme.typography.titleMedium)
-                Text("Total Room (DAO): ${clp(roomTotal)}")
-                Text("Suma por categorias: ${clp(chartTotal)}")
-                Text("Proyeccion anual: ${clp(roomTotal * 12L)}")
-                Text("Gasto hormiga mensual: ${clp(antTotal)}")
-                Text("Ahorro potencial anual: ${clp(antTotal * 12L)}")
-                Text(if (consistent) "CONCILIACION OK: montos coinciden" else "REVISAR: montos no coinciden",
-                    color = if (consistent) Color(0xFF16784C) else MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Bold)
-                Text("Los datos se actualizan al modificar Room.", style = MaterialTheme.typography.bodySmall)
-            }
         }
     }
 }

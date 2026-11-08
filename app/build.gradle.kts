@@ -11,7 +11,7 @@ plugins {
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
-    
+
     if (file.exists()) {
         file.inputStream().use { load(it) }
     }
@@ -50,7 +50,7 @@ android {
 
     buildTypes {
         release {
-            optimization { enable = false }
+            optimization { enable = true }
         }
     }
 
@@ -90,6 +90,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -98,6 +99,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 
     // Pruebas instrumentadas
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
@@ -109,6 +111,17 @@ dependencies {
 
 // Analisis estatico de calidad de codigo
 detekt {
+    debug = providers.gradleProperty("detektDiagnostics").isPresent
     config.setFrom(file("../config/detekt/detekt.yml"))
     buildUponDefaultConfig = true
+}
+
+// Extend the Android classpath after the plugin has configured its conventions.
+afterEvaluate {
+    tasks.named<dev.detekt.gradle.Detekt>("detektDebug") {
+        val debugJava = tasks.named<JavaCompile>("compileDebugJavaWithJavac")
+        val androidClasspath = classpath.from.toList()
+        dependsOn(debugJava)
+        classpath.setFrom(androidClasspath, debugJava.flatMap { it.destinationDirectory })
+    }
 }

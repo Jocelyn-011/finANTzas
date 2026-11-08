@@ -8,16 +8,20 @@ import cl.finantzas.app.data.remote.ExpenseRemoteRepository
 import cl.finantzas.app.data.remote.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 
 class ExpenseSyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    private companion object { const val MAX_RETRIES = 5 }
+
     override suspend fun doWork(): Result {
         val client = SupabaseProvider.client
 
         // Sin sesiÃ³n autenticada no se deben enviar datos.
+        client.auth.awaitInitialization()
         val user = client.auth.currentUserOrNull()
             ?: return Result.success()
 
@@ -27,19 +31,19 @@ class ExpenseSyncWorker(
             val expenses = database.expenseDao()
                 .getExpensesForSync(user.id)
 
-            if (expenses.isEmpty()) {
-                return Result.success()
+            if (expenses.isNotEmpty()) {
+                ExpenseRemoteRepository().uploadExpenses(expenses)
             }
-
-            ExpenseRemoteRepository().uploadExpenses(expenses)
 
             Result.success()
 
-        } catch (e: IOException) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
             Result.retry()
 
-        } catch (e: Exception) {
-            if (runAttemptCount < 5) Result.retry() else Result.failure()
+        } catch (_: Exception) {
+            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
     }
 }

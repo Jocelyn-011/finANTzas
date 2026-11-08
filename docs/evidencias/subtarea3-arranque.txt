@@ -1,0 +1,20 @@
+Dispositivo: Pixel_6 (AVD), emulator-5554, Android 15/API 35.
+Firma debug: keystore existente C:/Users/troco/.android/debug.keystore, alias AndroidDebugKey.
+Firma APK debug: apksigner verify --verbose, Verifies, esquema v2=true, 1 firmante.
+Instalacion: adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
+Resultado: Success. Sin desinstalacion ni pm clear.
+Antes de instalar, pm path cl.finantzas.app no devolvio ruta de paquete instalado.
+Arranque: adb -s emulator-5554 shell am start -W -n cl.finantzas.app/.MainActivity
+Status: ok
+LaunchState: COLD
+TotalTime: 25913 ms
+WaitTime: 26248 ms
+Activity: cl.finantzas.app/.MainActivity
+Comprobacion posterior: proceso activo, MainActivity en primer plano.
+Controles visibles: finANTzas, Iniciar sesion, Correo electronico, Contrasena, Ingresar, Crear una cuenta nueva.
+Pantalla alcanzada: autenticacion. No se almacenaron valores de campos ni credenciales.
+No se evaluo un objetivo de rendimiento de arranque; se registra el tiempo observado.
+Comprobacion final: siguen visibles Iniciar sesion, Ingresar y Crear una cuenta nueva.
+Navegacion interna Registro/Alertas: no visible por falta de sesion autenticada.
+No se crearon gastos ni se modificaron presupuestos durante esta verificacion.
+Resultado funcional: pendiente de inicio de sesion manual con cuenta de pruebas.
