@@ -1,21 +1,22 @@
 package cl.finantzas.app.data.local.entity
 
-import cl.aiep.finantzas.domain.rules.ExpenseCategory
-import cl.aiep.finantzas.domain.rules.ExpenseType
-import cl.aiep.finantzas.domain.rules.PaymentInstrument
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-/**
- * Entidad inmutable para representación o persistencia local de un gasto.
- * Todos los montos monetarios son estrictamente en CLP como enteros [Long].
- */
+@Entity(tableName = "expenses")
 data class ExpenseEntityClp(
-    val id: Long,
+    @PrimaryKey val id: String,
+    @ColumnInfo(name = "user_id") val userId: String,
     val concept: String,
-    val unitAmountClp: Long,
-    val weeklyFrequency: Int,
-    val type: ExpenseType,
-    val category: ExpenseCategory,
-    val paymentInstrument: PaymentInstrument,
-    val isAntExpense: Boolean = false,
-    val ruleReason: String? = null
+    @ColumnInfo(name = "unit_amount_clp") val unitAmountClp: Long,
+    @ColumnInfo(name = "monthly_impact_clp") val monthlyImpactClp: Long,
+    @ColumnInfo(name = "weekly_frequency") val weeklyFrequency: Int,
+    @ColumnInfo(name = "expense_type") val expenseType: String,
+    val category: String,
+    @ColumnInfo(name = "payment_method") val paymentMethod: String,
+    @ColumnInfo(name = "is_ant_expense") val isAntExpense: Boolean,
+    @ColumnInfo(name = "triggered_rule_code") val triggeredRuleCode: String,
+    @ColumnInfo(name = "rule_reason") val ruleReason: String,
+    @ColumnInfo(name = "created_at") val createdAt: Long
 )

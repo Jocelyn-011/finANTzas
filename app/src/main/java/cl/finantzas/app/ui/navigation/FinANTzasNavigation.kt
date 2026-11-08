@@ -1,4 +1,3 @@
-
 package cl.finantzas.app.ui.navigation
 
 import androidx.compose.foundation.layout.Arrangement
@@ -6,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Calculate
@@ -29,15 +29,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import cl.finantzas.app.ui.components.KpiCards
-import cl.finantzas.app.ui.theme.Petrol
-import androidx.compose.foundation.layout.RowScope
 import cl.finantzas.app.ui.components.ExpenseChartsScreen
-private data class Pantalla(
-    val ruta: String,
-    val titulo: String,
-    val icono: ImageVector
-)
+import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.theme.Petrol
+
+private data class Pantalla(val ruta: String, val titulo: String, val icono: ImageVector)
 
 private val pantallas = listOf(
     Pantalla("registro", "Registro", Icons.Outlined.AccountBalanceWallet),
@@ -50,52 +46,31 @@ private val pantallas = listOf(
 @Composable
 fun FinANTzasNavigation() {
     val navController = rememberNavController()
-    val entradaActual = navController.currentBackStackEntryAsState()
-    val rutaActual = entradaActual.value?.destination?.route ?: "registro"
+    val rutaActual = navController.currentBackStackEntryAsState().value?.destination?.route ?: "registro"
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            EncabezadoFinANTzas()
-        },
+        topBar = { EncabezadoFinANTzas() },
         bottomBar = {
-            BarraNavegacion(
-                rutaActual = rutaActual,
-                onNavigate = { ruta ->
-                    navController.navigate(ruta) {
-                        popUpTo("registro") {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+            BarraNavegacion(rutaActual) { ruta ->
+                navController.navigate(ruta) {
+                    popUpTo("registro") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
                 }
-            )
+            }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = "registro",
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)
         ) {
-            composable("registro") {
-                PantallaRegistro()
-            }
-            composable("graficos") {
-                ExpenseChartsScreen()
-            }
-            composable("simulador") {
-                PantallaTemporal("Simulador de Ahorro")
-            }
-            composable("alertas") {
-                PantallaTemporal("Alertas y Presupuestos")
-            }
-            composable("nfc") {
-                PantallaTemporal("Billetera NFC")
-            }
+            composable("registro") { PantallaRegistro() }
+            composable("graficos") { ExpenseChartsScreen() }
+            composable("simulador") { PantallaTemporal("Simulador de Ahorro") }
+            composable("alertas") { PantallaTemporal("Alertas y Presupuestos") }
+            composable("nfc") { PantallaTemporal("Billetera NFC") }
         }
     }
 }
@@ -107,61 +82,33 @@ private fun EncabezadoFinANTzas() {
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold,
         color = Petrol,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)
     )
 }
 
 @Composable
-private fun BarraNavegacion(
-    rutaActual: String,
-    onNavigate: (String) -> Unit
-) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = Petrol
-    ) {
+private fun BarraNavegacion(rutaActual: String, onNavigate: (String) -> Unit) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, contentColor = Petrol) {
         pantallas.forEach { pantalla ->
             val seleccionada = rutaActual == pantalla.ruta
-
-            ItemNavegacion(
-                pantalla = pantalla,
-                seleccionada = seleccionada,
-                onClick = {
-                    if (!seleccionada) {
-                        onNavigate(pantalla.ruta)
-                    }
-                }
-            )
+            ItemNavegacion(pantalla, seleccionada) {
+                if (!seleccionada) onNavigate(pantalla.ruta)
+            }
         }
     }
 }
 
 @Composable
-private fun RowScope.ItemNavegacion(
-    pantalla: Pantalla,
-    seleccionada: Boolean,
-    onClick: () -> Unit
-) {
+private fun RowScope.ItemNavegacion(pantalla: Pantalla, seleccionada: Boolean, onClick: () -> Unit) {
     NavigationBarItem(
         selected = seleccionada,
         onClick = onClick,
-        icon = {
-            Icon(
-                imageVector = pantalla.icono,
-                contentDescription = pantalla.titulo
-            )
-        },
+        icon = { Icon(pantalla.icono, contentDescription = pantalla.titulo) },
         label = {
             Text(
-                text = pantalla.titulo,
+                pantalla.titulo,
                 maxLines = 1,
-                fontWeight = if (seleccionada) {
-                    FontWeight.Bold
-                } else {
-                    FontWeight.Normal
-                }
+                fontWeight = if (seleccionada) FontWeight.Bold else FontWeight.Normal
             )
         },
         alwaysShowLabel = true,
@@ -177,38 +124,16 @@ private fun RowScope.ItemNavegacion(
 
 @Composable
 private fun PantallaRegistro() {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "Registro y Motor Hormiga",
-            style = MaterialTheme.typography.titleLarge,
-            color = Petrol
-        )
-
-        KpiCards(
-            gastoMensual = 0L,
-            proyeccionAnual = 0L,
-            gastoHormiga = 0L,
-            ahorroPotencial = 0L
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Registro y Motor Hormiga", style = MaterialTheme.typography.titleLarge, color = Petrol)
+        ExpenseDemoScreen()
     }
 }
 
 @Composable
 private fun PantallaTemporal(titulo: String) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = titulo,
-            style = MaterialTheme.typography.titleLarge,
-            color = Petrol
-        )
-
-        Text(
-            text = "Pantalla preparada para desarrollo.",
-            style = MaterialTheme.typography.bodyMedium
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(titulo, style = MaterialTheme.typography.titleLarge, color = Petrol)
+        Text("Pantalla preparada para desarrollo.", style = MaterialTheme.typography.bodyMedium)
     }
 }

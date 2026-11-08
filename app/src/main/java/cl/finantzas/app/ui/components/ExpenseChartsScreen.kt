@@ -7,297 +7,186 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import cl.aiep.finantzas.domain.rules.ClpCurrencyFormatter
-import cl.aiep.finantzas.domain.rules.PaymentMethodLeakageResult
-import cl.finantzas.app.ui.theme.AlertaHormiga
-import cl.finantzas.app.ui.theme.Emerald
-import cl.finantzas.app.ui.theme.Petrol
-import cl.finantzas.app.ui.viewmodel.ExpenseChartsUiState
+import cl.finantzas.app.data.local.database.SecureDatabaseProvider
+import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
+import cl.aiep.finantzas.domain.rules.PaymentInstrument
+import cl.aiep.finantzas.domain.rules.PaymentMethodLeakageResult
+import java.text.NumberFormat
+import java.util.Locale
 
-private const val FULL_CIRCLE_DEGREES: Float = 360f
-private const val START_ANGLE_OFFSET: Float = -90f
-private const val ZERO_FLOAT: Float = 0f
-private const val DEFAULT_STROKE_WIDTH_DP: Int = 26
-private const val HIGH_LEAKAGE_THRESHOLD: Int = 50
-
-/**
- * Modelo de datos inmutable para cada segmento del gráfico de anillo (Donut Chart).
- */
-data class DonutSliceUiModel(
-    val label: String,
-    val amountClp: Long,
-    val sweepPercentage: Float,
-    val color: Color
+private const val CHART_DEMO_USER = "finantzas-demo-local"
+private val chartColors = listOf(
+    Color(0xFF008577), Color(0xFFEF8C35), Color(0xFF5D68C4),
+    Color(0xFFE15F73), Color(0xFF7B8A8B), Color(0xFF6D9F4A)
 )
 
-@Composable
-fun ExpenseChartsScreen(
-    modifier: Modifier = Modifier,
-    viewModel: ExpenseViewModel = viewModel()
-) {
-    val uiState by viewModel.uiState.collectAsState()
+private fun clp(value: Long): String = "$" + NumberFormat.getIntegerInstance(Locale("es", "CL")).format(value)
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Analítica y Distribución de Gastos",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Petrol
-            )
-        }
-
-        item {
-            ChartSectionCard(
-                title = "Distribución por Categorías",
-                subtitle = "Proporción del gasto mensual total según clasificación de consumo"
-            ) {
-                DonutChartWithLegend(slices = uiState.categorySlices)
-            }
-        }
-
-        item {
-            ChartSectionCard(
-                title = "División por Medio de Pago",
-                subtitle = "Identifica qué instrumento concentra el mayor volumen de transacciones"
-            ) {
-                DonutChartWithLegend(slices = uiState.paymentSlices)
-            }
-        }
-
-        item {
-            Text(
-                text = "Ranking de Porcentaje de Fuga por Medio de Pago (RN-04)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Petrol,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-
-        items(uiState.paymentLeakageRanking) { rankingItem ->
-            PaymentLeakageRankingCard(item = rankingItem)
-        }
-    }
+private fun instrumentFor(paymentMethod: String): PaymentInstrument = when (paymentMethod.trim().uppercase()) {
+    "CREDIT_CARD", "CREDIT" -> PaymentInstrument.CreditCard
+    "DEBIT", "DEBIT_CARD" -> PaymentInstrument.DebitCard
+    "CASH" -> PaymentInstrument.Cash
+    "NFC_MOBILE_WALLET", "NFC" -> PaymentInstrument.NfcMobileWallet
+    "BANK_TRANSFER", "TRANSFER" -> PaymentInstrument.BankTransfer
+    else -> PaymentInstrument.fromCode(paymentMethod)
 }
 
 @Composable
-fun DonutChartCanvas(
-    slices: List<DonutSliceUiModel>,
-    modifier: Modifier = Modifier,
-    strokeWidth: Dp = DEFAULT_STROKE_WIDTH_DP.dp
-) {
-    val totalAmount = slices.fold(0L) { acc, slice -> acc + slice.amountClp }
+fun ExpenseChartsScreen() {
+    val context = LocalContext.current.applicationContext
+    val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
+    val repository = remember(dao) { RoomExpenseRepository(dao) }
+    val viewModel = remember(repository) { ExpenseViewModel(repository, CHART_DEMO_USER) }
+    val expenses by viewModel.expenses.collectAsState()
+    val roomTotal by viewModel.totalMonthlyClp.collectAsState()
 
-    Canvas(modifier = modifier) {
-        val strokePx = strokeWidth.toPx()
-
-        if (slices.isEmpty() || totalAmount <= 0L) {
-            drawArc(
-                color = Color.LightGray.copy(alpha = 0.5f),
-                startAngle = ZERO_FLOAT,
-                sweepAngle = FULL_CIRCLE_DEGREES,
-                useCenter = false,
-                style = Stroke(width = strokePx, cap = StrokeCap.Butt)
-            )
-            return@Canvas
-        }
-
-        var currentStartAngle = START_ANGLE_OFFSET
-        slices.forEach { slice ->
-            val sweepAngle = (slice.sweepPercentage / 100f) * FULL_CIRCLE_DEGREES
-            drawArc(
-                color = slice.color,
-                startAngle = currentStartAngle,
-                sweepAngle = sweepAngle,
-                useCenter = false,
-                style = Stroke(width = strokePx, cap = StrokeCap.Butt)
-            )
-            currentStartAngle += sweepAngle
-        }
+    val categories = remember(expenses) {
+        expenses.groupBy { it.category }
+            .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
+            .toList().sortedByDescending { it.second }
     }
-}
+    val paymentMethods = remember(expenses) {
+        expenses.groupBy { instrumentFor(it.paymentMethod) }
+            .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
+            .toList().sortedByDescending { it.second }
+    }
+    val chartTotal = categories.sumOf { it.second }
+    val antTotal = expenses.filter { it.isAntExpense }.sumOf { it.monthlyImpactClp }
+    val leakageRanking = paymentMethods.map { (instrument, total) ->
+        val ant = expenses.asSequence()
+            .filter { instrumentFor(it.paymentMethod) == instrument && it.isAntExpense }
+            .sumOf { it.monthlyImpactClp }
+        PaymentMethodLeakageResult(
+            instrument = instrument,
+            totalExpenseAmountClp = total,
+            antExpenseAmountClp = ant,
+            leakagePercentage = if (total > 0L) ((ant * 100L) / total).toInt() else 0
+        )
+    }.sortedByDescending { it.leakagePercentage }
 
-@Composable
-private fun DonutChartWithLegend(slices: List<DonutSliceUiModel>) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(
-            modifier = Modifier.size(160.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            DonutChartCanvas(
-                slices = slices,
-                modifier = Modifier.size(140.dp)
-            )
-        }
+        Text("Distribución de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Datos reactivos desde Room (CLP)", style = MaterialTheme.typography.bodySmall)
 
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            slices.forEach { slice ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(slice.color)
-                    )
-                    Text(
-                        text = slice.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+        ChartCard("Anillo por categoría") {
+            if (chartTotal > 0L) {
+                DonutChart(
+                    amounts = categories.map { it.second },
+                    labels = categories.map { it.first },
+                    colors = chartColors
+                )
+                categories.forEachIndexed { index, (name, amount) ->
+                    LegendRow(chartColors[index % chartColors.size], "$name: ${clp(amount)}")
                 }
-                Text(
-                    text = "${ClpCurrencyFormatter.formatClp(slice.amountClp)} (${slice.sweepPercentage.toInt()}%)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(start = 16.dp)
+            } else Text("No hay gastos registrados.")
+        }
+
+        ChartCard("Anillo por medio de pago") {
+            if (paymentMethods.isNotEmpty()) {
+                DonutChart(
+                    amounts = paymentMethods.map { it.second },
+                    labels = paymentMethods.map { it.first.displayName },
+                    colors = chartColors
                 )
+            } else Text("No hay gastos registrados.")
+        }
+
+        ChartCard("Fuga por medio de pago (RN-04)") {
+            if (leakageRanking.isEmpty()) Text("No hay datos para representar.")
+            leakageRanking.forEach { row ->
+                Text(
+                    "${row.instrument.displayName}: ${row.leakagePercentage}% · " +
+                        "${clp(row.antExpenseAmountClp)} de ${clp(row.totalExpenseAmountClp)}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        ChartCard("Conciliación y KPIs") {
+            Text("Total Room (DAO): ${clp(roomTotal)}")
+            Text("Suma por categorías: ${clp(chartTotal)}")
+            Text("Proyección anual: ${clp(roomTotal * 12L)}")
+            Text("Gasto hormiga mensual: ${clp(antTotal)}")
+            Text("Ahorro potencial anual: ${clp(antTotal * 12L)}")
+            val consistent = chartTotal == roomTotal
+            Text(
+                if (consistent) "CONCILIACIÓN OK" else "REVISAR: montos no coinciden",
+                color = if (consistent) Color(0xFF16784C) else MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun DonutChart(amounts: List<Long>, labels: List<String>, colors: List<Color>) {
+    val total = amounts.sumOf { it }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Canvas(Modifier.size(132.dp)) {
+            var start = -90f
+            amounts.forEachIndexed { index, amount ->
+                val sweep = if (total > 0L) 360f * amount.toFloat() / total.toFloat() else 0f
+                drawArc(
+                    color = colors[index % colors.size],
+                    startAngle = start,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    style = Stroke(width = 24.dp.toPx(), cap = StrokeCap.Butt)
+                )
+                start += sweep
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(clp(total), fontWeight = FontWeight.Bold)
+            Text("Mensual", style = MaterialTheme.typography.bodySmall)
+            labels.forEachIndexed { index, label ->
+                Text("${label.take(20)} · ${amounts[index].toFloat().div(total.coerceAtLeast(1L)).times(100).toInt()}%")
             }
         }
     }
 }
 
 @Composable
-private fun PaymentLeakageRankingCard(
-    item: PaymentMethodLeakageResult,
-    modifier: Modifier = Modifier
-) {
-    val indicatorColor = if (item.leakagePercentage >= HIGH_LEAKAGE_THRESHOLD) {
-        AlertaHormiga
-    } else if (item.leakagePercentage > 0) {
-        Petrol
-    } else {
-        Emerald
-    }
-
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(indicatorColor)
-                )
-                Column {
-                    Text(
-                        text = item.instrument.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Gasto Total: ${ClpCurrencyFormatter.formatClp(item.totalExpenseAmountClp)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${item.leakagePercentage}% de fuga",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = indicatorColor
-                )
-                Text(
-                    text = ClpCurrencyFormatter.formatClp(item.antExpenseAmountClp),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+private fun LegendRow(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.size(8.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
-private fun ChartSectionCard(
-    title: String,
-    subtitle: String,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Petrol
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+private fun ChartCard(title: String, content: @Composable () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             content()
         }
     }
