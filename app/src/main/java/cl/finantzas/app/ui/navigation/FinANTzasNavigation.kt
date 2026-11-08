@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -314,7 +312,7 @@ private fun RowScope.ItemNavegacion(
 @Composable
 private fun PantallaRegistro(expenseViewModel: ExpenseViewModel) {
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
@@ -323,7 +321,10 @@ private fun PantallaRegistro(expenseViewModel: ExpenseViewModel) {
             color = Petrol
         )
 
-        ExpenseDemoScreen(viewModel = expenseViewModel)
+        ExpenseDemoScreen(
+            viewModel = expenseViewModel,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
