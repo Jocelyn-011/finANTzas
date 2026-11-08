@@ -1,6 +1,8 @@
 
 package cl.finantzas.app.ui.navigation
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +45,7 @@ private data class Pantalla(
 
 private val pantallas = listOf(
     Pantalla("registro", "Registro", Icons.Outlined.AccountBalanceWallet),
-    Pantalla("graficos", "Gráficos", Icons.Outlined.PieChart),
+    Pantalla("graficos", "GrÃ¡ficos", Icons.Outlined.PieChart),
     Pantalla("simulador", "Simulador", Icons.Outlined.Calculate),
     Pantalla("alertas", "Alertas", Icons.Outlined.Notifications),
     Pantalla("nfc", "NFC", Icons.Outlined.Nfc)
@@ -51,6 +53,22 @@ private val pantallas = listOf(
 
 @Composable
 fun FinANTzasNavigation() {
+    val userId = cl.finantzas.app.ui.components.activeExpenseUser()
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val database = androidx.compose.runtime.remember(context) { cl.finantzas.app.data.local.database.SecureDatabaseProvider.getDatabase(context) }
+    val budgetViewModel: cl.finantzas.app.ui.viewmodel.BudgetViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        key = "budgets-$userId",
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return cl.finantzas.app.ui.viewmodel.BudgetViewModel(
+                    cl.finantzas.app.data.repository.BudgetRepository(database.budgetLimitDao()),
+                    cl.finantzas.app.data.repository.RoomExpenseRepository(database.expenseDao()), userId,
+                    { cl.finantzas.app.workers.BudgetSyncScheduler.schedule(context) }
+                ) as T
+            }
+        }
+    )
     val navController = rememberNavController()
     val entradaActual = navController.currentBackStackEntryAsState()
     val rutaActual = entradaActual.value?.destination?.route ?: "registro"
@@ -93,7 +111,7 @@ fun FinANTzasNavigation() {
                 PantallaTemporal("Simulador de Ahorro")
             }
             composable("alertas") {
-                PantallaTemporal("Alertas y Presupuestos")
+                cl.finantzas.app.ui.components.BudgetScreen(budgetViewModel)
             }
             composable("nfc") {
                 PantallaTemporal("Billetera NFC")
@@ -180,6 +198,7 @@ private fun RowScope.ItemNavegacion(
 @Composable
 private fun PantallaRegistro() {
     Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(

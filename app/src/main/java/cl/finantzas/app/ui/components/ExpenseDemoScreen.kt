@@ -21,14 +21,13 @@ import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.launch
 
-private const val DEMO_USER_ID = "finantzas-demo-local"
-
 @Composable
 fun ExpenseDemoScreen() {
+    val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
     val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val viewModel = remember(repository) { ExpenseViewModel(repository, DEMO_USER_ID) }
+    val viewModel = remember(repository, userId) { ExpenseViewModel(repository, userId) }
     val expenses by viewModel.expenses.collectAsState()
     val totalMonthly by viewModel.totalMonthlyClp.collectAsState()
     val scope = rememberCoroutineScope()
@@ -43,6 +42,7 @@ fun ExpenseDemoScreen() {
             gastoHormiga = antMonthly,
             ahorroPotencial = antMonthly * 12L
         )
+        MonthlyExpenseEntry(repository, userId)
         Button(
             onClick = {
                 if (!restoring) {
@@ -50,7 +50,7 @@ fun ExpenseDemoScreen() {
                     error = null
                     scope.launch {
                         try {
-                            dao.restoreDemoExpenses(DEMO_USER_ID, ExpenseDemoDataClp.create(DEMO_USER_ID))
+                            dao.restoreDemoExpenses(userId, ExpenseDemoDataClp.create(userId))
                         } catch (e: Exception) {
                             error = "No se pudieron restaurar los datos: ${e.message ?: "error desconocido"}"
                         } finally {
@@ -59,7 +59,7 @@ fun ExpenseDemoScreen() {
                     }
                 }
             },
-            enabled = !restoring,
+            enabled = !restoring && userId == LOCAL_EXPENSE_USER,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (restoring) "Restaurando..." else "Restaurar datos de ejemplo") }
         if (error != null) Text(error!!)

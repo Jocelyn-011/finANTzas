@@ -35,7 +35,6 @@ import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
-private const val CHART_DEMO_USER = "finantzas-demo-local"
 private val chartColors = listOf(
     Color(0xFF008577), Color(0xFFEF8C35), Color(0xFF5D68C4),
     Color(0xFFE15F73), Color(0xFF7B8A8B), Color(0xFF6D9F4A)
@@ -44,10 +43,11 @@ private fun clp(value: Long): String = "$" + NumberFormat.getIntegerInstance(Loc
 
 @Composable
 fun ExpenseChartsScreen() {
+    val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
     val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val viewModel = remember(repository) { ExpenseViewModel(repository, CHART_DEMO_USER) }
+    val viewModel = remember(repository, userId) { ExpenseViewModel(repository, userId) }
     val expenses by viewModel.expenses.collectAsState()
     val roomTotal by viewModel.totalMonthlyClp.collectAsState()
     val categories = remember(expenses) {
