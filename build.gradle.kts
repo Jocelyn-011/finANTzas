@@ -4,8 +4,7 @@ plugins {
 
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10" apply false
 
-    // Hilt pendiente de configuracion por el equipo
-    // alias(libs.plugins.hilt.android) apply false
+    alias(libs.plugins.hilt.android) apply false
 
     alias(libs.plugins.ksp) apply false
 
