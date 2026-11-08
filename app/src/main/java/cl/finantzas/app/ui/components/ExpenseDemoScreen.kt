@@ -19,30 +19,38 @@ import cl.finantzas.app.data.demo.ExpenseDemoDataClp
 import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @Composable
 fun ExpenseDemoScreen() {
     val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
+    val database = remember(context) { SecureDatabaseProvider.getDatabase(context) }
+    val repository = remember(database) { RoomExpenseRepository(database.expenseDao()) }
+    val viewModel = remember(repository, userId) {
+        ExpenseViewModel(
+            repository = repository,
+            userId = userId,
+            budgetLimitsFlow = database.budgetLimitDao().observe(userId)
+        )
+    }
+    ExpenseDemoScreen(viewModel = viewModel)
+}
+
+@Composable
+fun ExpenseDemoScreen(viewModel: ExpenseViewModel) {
+    val userId = activeExpenseUser()
+    val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
     val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val viewModel = remember(repository, userId) { ExpenseViewModel(repository, userId) }
-    val expenses by viewModel.expenses.collectAsState()
-    val totalMonthly by viewModel.totalMonthlyClp.collectAsState()
+    val dashboardState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     var restoring by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val antMonthly = expenses.filter { it.isAntExpense }.sumOf { it.monthlyImpactClp }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        KpiCards(
-            gastoMensual = totalMonthly,
-            proyeccionAnual = totalMonthly * 12L,
-            gastoHormiga = antMonthly,
-            ahorroPotencial = antMonthly * 12L
-        )
+        KpiCards(uiState = dashboardState)
         MonthlyExpenseEntry(repository, userId)
         Button(
             onClick = {

@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cl.aiep.finantzas.domain.rules.ClpCurrencyFormatter
 import cl.finantzas.app.ui.theme.AlertaHormiga
 import cl.finantzas.app.ui.theme.Emerald
 import cl.finantzas.app.ui.theme.Petrol
+import cl.finantzas.app.ui.viewmodel.ExpenseDashboardUiState
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -26,6 +28,20 @@ private fun formatoCLP(monto: Long): String {
         Locale.forLanguageTag("es-CL")
     )
     return "$" + formato.format(monto)
+}
+
+@Composable
+fun KpiCards(
+    uiState: ExpenseDashboardUiState,
+    modifier: Modifier = Modifier
+) {
+    KpiCards(
+        gastoMensual = uiState.totalMonthlyClp,
+        proyeccionAnual = uiState.projectedAnnualClp,
+        gastoHormiga = uiState.antMonthlyClp,
+        ahorroPotencial = uiState.annualSavingsClp,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -72,7 +88,8 @@ fun KpiCards(
                 titulo = "Ahorro potencial / año",
                 monto = ahorroPotencial,
                 color = Emerald,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                textoFormateado = ClpCurrencyFormatter.formatClp(ahorroPotencial)
             )
         }
     }
@@ -83,7 +100,8 @@ private fun KpiCard(
     titulo: String,
     monto: Long,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textoFormateado: String = formatoCLP(monto)
 ) {
     Card(
         modifier = modifier,
@@ -104,7 +122,7 @@ private fun KpiCard(
             )
 
             Text(
-                text = formatoCLP(monto),
+                text = textoFormateado,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = color
