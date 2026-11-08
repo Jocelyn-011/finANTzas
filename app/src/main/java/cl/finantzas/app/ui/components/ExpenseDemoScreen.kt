@@ -20,6 +20,7 @@ import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ExpenseDemoScreen() {
@@ -51,8 +52,10 @@ fun ExpenseDemoScreen() {
                     scope.launch {
                         try {
                             dao.restoreDemoExpenses(userId, ExpenseDemoDataClp.create(userId))
-                        } catch (e: Exception) {
-                            error = "No se pudieron restaurar los datos: ${e.message ?: "error desconocido"}"
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            error = "No se pudieron restaurar los datos de ejemplo."
                         } finally {
                             restoring = false
                         }
@@ -62,6 +65,6 @@ fun ExpenseDemoScreen() {
             enabled = !restoring && userId == LOCAL_EXPENSE_USER,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (restoring) "Restaurando..." else "Restaurar datos de ejemplo") }
-        if (error != null) Text(error!!)
+        error?.let { Text(it) }
     }
 }

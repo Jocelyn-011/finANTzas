@@ -9,7 +9,12 @@ object SecureDatabaseProvider {
 
     val BUDGET_MIGRATION = object : androidx.room.migration.Migration(1, 2) {
         override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS category_budgets (user_id TEXT NOT NULL, category TEXT NOT NULL, monthly_limit_clp INTEGER NOT NULL, revision INTEGER NOT NULL, dirty INTEGER NOT NULL, PRIMARY KEY(user_id, category))")
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS category_budgets (
+                    user_id TEXT NOT NULL, category TEXT NOT NULL, monthly_limit_clp INTEGER NOT NULL,
+                    revision INTEGER NOT NULL, dirty INTEGER NOT NULL, PRIMARY KEY(user_id, category)
+                )"""
+            )
         }
     }
 

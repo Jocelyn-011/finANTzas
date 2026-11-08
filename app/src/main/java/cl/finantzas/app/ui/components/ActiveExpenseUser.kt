@@ -1,6 +1,10 @@
 package cl.finantzas.app.ui.components
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import cl.finantzas.app.BuildConfig
 import cl.finantzas.app.data.remote.SupabaseProvider
 import io.github.jan.supabase.auth.auth

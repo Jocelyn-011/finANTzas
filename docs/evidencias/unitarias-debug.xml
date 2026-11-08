@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites><testsuite name="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:51.470Z" hostname="LAPTOP-F7I8NHGI" time="0.075">
+  <properties />
+  <testcase name="debe verificar que las constantes en FinancialThresholds cumplan las reglas de negocio en CLP" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.029" />
+  <testcase name="ClpCurrencyFormatter debe formatear montos enteros en CLP con punto de miles y sin decimales" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.002" />
+  <testcase name="debe permitir inyectar una nueva regla personalizada mediante fun interface AntExpenseRule" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.023" />
+  <testcase name="debe clasificar como Gasto Hormiga RN-02 cuando micro-compra de 3500 CLP" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.001" />
+  <testcase name="NO debe clasificar como Gasto Hormiga si la micro-compra se repite 3 veces o menos por semana" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.001" />
+  <testcase name="debe clasificar como Gasto Hormiga RN-03 cualquier suscripcion de entretenimiento en CLP" classname="cl.aiep.finantzas.domain.rules.AntExpenseRuleEngineTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:51.550Z" hostname="LAPTOP-F7I8NHGI" time="0.013">
+  <properties />
+  <testcase name="micro-compra de 3500 CLP 5 veces por semana da 70000 mensual y 840000 anual" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.001" />
+  <testcase name="suscripcion mensual fija de 26900 CLP da 26900 mensual y 322800 anual" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.001" />
+  <testcase name="desbordamiento de Long lanza ArithmeticException en vez de un monto corrupto" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.003" />
+  <testcase name="el motor de reglas usa exactamente el mismo calculo mensual" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.001" />
+  <testcase name="monto o frecuencia negativos son rechazados" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.003" />
+  <testcase name="sumClp suma montos CLP de forma exacta" classname="cl.aiep.finantzas.domain.rules.ClpImpactCalculatorTest" time="0.003" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculatorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:51.567Z" hostname="LAPTOP-F7I8NHGI" time="0.012">
+  <properties />
+  <testcase name="caso borde division por cero cuando gasto total es 0L retorna 0 porciento y 0L de fuga sin excepcion" classname="cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculatorTest" time="0.002" />
+  <testcase name="cumple principio LSP procesando polimorficamente subtipos de PaymentInstrument y ordenando ranking" classname="cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculatorTest" time="0.008" />
+  <testcase name="calcula porcentaje entero de fuga exacto segun formula RN-04 en CLP" classname="cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculatorTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:51.598Z" hostname="LAPTOP-F7I8NHGI" time="0.449">
+  <properties />
+  <testcase name="con StandardTestDispatcher el gasto se refleja solo despues de advanceUntilIdle" classname="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" time="0.431" />
+  <testcase name="estado inicial es vacio y todos los montos en CLP son cero" classname="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" time="0.004" />
+  <testcase name="calcula totales mensuales y anuales exactos en Long" classname="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" time="0.005" />
+  <testcase name="error de validacion se expone en errorMessage y onErrorShown lo limpia" classname="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" time="0.004" />
+  <testcase name="el estado se recalcula cuando el repositorio emite datos nuevos" classname="cl.aiep.finantzas.domain.rules.FinantzasViewModelTest" time="0.003" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cl.finantzas.app.BudgetCardStateTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:52.050Z" hostname="LAPTOP-F7I8NHGI" time="0.003">
+  <properties />
+  <testcase name="supportsLongClpWithoutIntegerOverflow" classname="cl.finantzas.app.BudgetCardStateTest" time="0.002" />
+  <testcase name="percentageKeepsOverspendingWhileProgressIsClamped" classname="cl.finantzas.app.BudgetCardStateTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cl.finantzas.app.ExampleUnitTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-08T06:24:52.056Z" hostname="LAPTOP-F7I8NHGI" time="0.001">
+  <properties />
+  <testcase name="addition_isCorrect" classname="cl.finantzas.app.ExampleUnitTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite></testsuites>

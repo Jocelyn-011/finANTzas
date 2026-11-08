@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="5" failures="0" errors="0" skipped="0" time="0.000" timestamp="2026-11-08T06:36:18" hostname="localhost">
+  <testsuite name="cl.finantzas.app.ExampleInstrumentedTest" tests="1" failures="0" errors="0" skipped="0" time="0.002" timestamp="2026-11-08T06:36:18" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="useAppContext" classname="cl.finantzas.app.ExampleInstrumentedTest" time="0.002" />
+  </testsuite>
+  <testsuite name="cl.finantzas.app.data.repository.BudgetPersistenceTest" tests="2" failures="0" errors="0" skipped="0" time="1.745" timestamp="2026-11-08T06:36:18" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="expenseInsertUpdatesBudgetStateWithoutRestart" classname="cl.finantzas.app.data.repository.BudgetPersistenceTest" time="0.129" />
+    <testcase name="encryptedBudgetsPersistAndPendingEditsSurviveRemoteMerge" classname="cl.finantzas.app.data.repository.BudgetPersistenceTest" time="1.616" />
+  </testsuite>
+  <testsuite name="cl.finantzas.app.data.repository.EncryptedExpensePerformanceTest" tests="1" failures="0" errors="0" skipped="0" time="0.956" timestamp="2026-11-08T06:36:18" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="encryptedExpenseWritesUnder50ms" classname="cl.finantzas.app.data.repository.EncryptedExpensePerformanceTest" time="0.956" />
+  </testsuite>
+  <testsuite name="cl.finantzas.app.data.repository.KeystoreSecurityTest" tests="1" failures="0" errors="0" skipped="0" time="0.029" timestamp="2026-11-08T06:36:18" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="passphraseIsStableAndMasterKeyIsNotExportable" classname="cl.finantzas.app.data.repository.KeystoreSecurityTest" time="0.029" />
+  </testsuite>
+</testsuites>

@@ -42,7 +42,7 @@ class AntExpenseRuleEngineTest {
     // 2. Validación de Reglas RN-02 (>3/sem) y RN-03 (Entretenimiento) en CLP
     // ------------------------------------------------------------------------
     @Test
-    fun `debe clasificar como Gasto Hormiga RN-02 cuando micro-compra de 3500 CLP se repite 5 veces por semana dando 70000 CLP al mes`() {
+    fun `debe clasificar como Gasto Hormiga RN-02 cuando micro-compra de 3500 CLP`() {
         // Arrange (Preparar)
         val candidate = ExpenseCandidate(
             concept = "Café de grano camino a clases",
@@ -102,7 +102,7 @@ class AntExpenseRuleEngineTest {
     // 3. Validación del Patrón Strategy (Principio SOLID OCP con fun interface)
     // ------------------------------------------------------------------------
     @Test
-    fun `debe permitir inyectar una nueva regla personalizada mediante fun interface AntExpenseRule sin modificar el motor (OCP)`() {
+    fun `debe permitir inyectar una nueva regla personalizada mediante fun interface AntExpenseRule`() {
         // Arrange: Creamos una regla nueva al vuelo usando lambda sobre la fun interface AntExpenseRule
         val customDeliveryWeekendRule = AntExpenseRule { candidate ->
             if (candidate.concept.contains("Delivery", ignoreCase = true)) {

@@ -1,4 +1,4 @@
-﻿package cl.finantzas.app.ui.viewmodel
+package cl.finantzas.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

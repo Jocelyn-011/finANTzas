@@ -55,7 +55,9 @@ private val pantallas = listOf(
 fun FinANTzasNavigation() {
     val userId = cl.finantzas.app.ui.components.activeExpenseUser()
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    val database = androidx.compose.runtime.remember(context) { cl.finantzas.app.data.local.database.SecureDatabaseProvider.getDatabase(context) }
+    val database = androidx.compose.runtime.remember(context) {
+        cl.finantzas.app.data.local.database.SecureDatabaseProvider.getDatabase(context)
+    }
     val budgetViewModel: cl.finantzas.app.ui.viewmodel.BudgetViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         key = "budgets-$userId",
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {

@@ -13,6 +13,8 @@ import javax.crypto.spec.GCMParameterSpec
 
 class AndroidKeystoreVault(context: Context) {
 
+    private companion object { const val GCM_TAG_BITS = 128 }
+
     private val alias = "finantzas_sqlcipher_master_key"
 
     private val preferences = context.applicationContext
@@ -61,7 +63,7 @@ class AndroidKeystoreVault(context: Context) {
                 Cipher.DECRYPT_MODE,
                 getOrCreateKey(),
                 GCMParameterSpec(
-                    128,
+                    GCM_TAG_BITS,
                     Base64.decode(storedIv, Base64.NO_WRAP)
                 )
             )

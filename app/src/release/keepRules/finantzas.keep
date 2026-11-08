@@ -1,0 +1,5 @@
+# Keep generic and annotation metadata used by serialization and framework integrations.
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
+
+# Room, WorkManager, SQLCipher and Kotlin serialization supply consumer rules.
+# Add targeted rules only for failures reproduced in the optimized release.

@@ -23,3 +23,8 @@ google-services.json
 
 # Configuracion local de Android Studio
 .idea/
+
+# Archivos de ejecucion, reportes y logs
+.kotlin/
+*.log
+*.html

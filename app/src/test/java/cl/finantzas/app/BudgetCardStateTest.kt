@@ -1,7 +1,7 @@
 package cl.finantzas.app
 
 import cl.finantzas.app.ui.viewmodel.BudgetCardState
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BudgetCardStateTest {

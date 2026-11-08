@@ -1,4 +1,4 @@
-﻿package cl.finantzas.app.data.local.entity
+package cl.finantzas.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
