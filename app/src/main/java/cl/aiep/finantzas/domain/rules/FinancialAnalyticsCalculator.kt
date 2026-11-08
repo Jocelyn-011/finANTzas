@@ -54,4 +54,34 @@ object FinancialAnalyticsCalculator {
             leakagePercentage = percentage
         )
     }
+
+    /**
+     * Proyecta el ahorro potencial anual en CLP ([Long]) a partir de un impacto mensual
+     * de gastos hormiga, apoyándose en [FinancialThresholds.MONTHS_IN_YEAR].
+     */
+    fun simulateAnnualSavingsClp(monthlyAntExpenseClp: Long): Long {
+        if (monthlyAntExpenseClp <= ZERO_AMOUNT_CLP) {
+            return ZERO_AMOUNT_CLP
+        }
+        return ClpImpactCalculator.annualImpactClp(monthlyAntExpenseClp)
+    }
+
+    /**
+     * Proyecta el ahorro potencial anual en CLP ([Long]) sumando de forma segura
+     * los impactos mensuales de los gastos hormiga detectados.
+     */
+    fun simulateAnnualSavingsClp(monthlyAntImpactsClp: Iterable<Long>): Long {
+        val positiveImpacts = monthlyAntImpactsClp.filter { it > ZERO_AMOUNT_CLP }
+        val monthlyTotalClp = ClpImpactCalculator.sumClp(positiveImpacts)
+        return simulateAnnualSavingsClp(monthlyTotalClp)
+    }
+
+    /**
+     * Proyecta el ahorro potencial anual en CLP ([Long]) filtrando únicamente los veredictos
+     * clasificados como gasto hormiga por el motor de reglas.
+     */
+    fun simulateAnnualSavingsFromVerdicts(verdicts: Iterable<AntExpenseVerdict>): Long =
+        simulateAnnualSavingsClp(
+            verdicts.filter { it.isAntExpense }.map { it.monthlyImpactClp }
+        )
 }

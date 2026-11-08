@@ -65,11 +65,23 @@ private fun instrumentFor(paymentMethod: String): PaymentInstrument = when (paym
 fun ExpenseChartsScreen() {
     val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
-    val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
-    val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val viewModel = remember(repository, userId) { ExpenseViewModel(repository, userId) }
+    val database = remember(context) { SecureDatabaseProvider.getDatabase(context) }
+    val repository = remember(database) { RoomExpenseRepository(database.expenseDao()) }
+    val viewModel = remember(repository, userId) {
+        ExpenseViewModel(
+            repository = repository,
+            userId = userId,
+            budgetLimitsFlow = database.budgetLimitDao().observe(userId)
+        )
+    }
+    ExpenseChartsScreen(viewModel = viewModel)
+}
+
+@Composable
+fun ExpenseChartsScreen(viewModel: ExpenseViewModel) {
     val expenses by viewModel.expenses.collectAsState()
     val roomTotal by viewModel.totalMonthlyClp.collectAsState()
+    val dashboardState by viewModel.uiState.collectAsState()
     val categories = remember(expenses) {
         expenses.groupBy { it.category }
             .mapValues { (_, items) -> items.sumOf { it.monthlyImpactClp } }
@@ -87,7 +99,6 @@ fun ExpenseChartsScreen() {
         }.sortedByDescending { it.leakagePercentage }
     }
     val chartTotal = categories.sumOf { it.second }
-    val antTotal = expenses.filter { it.isAntExpense }.sumOf { it.monthlyImpactClp }
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -97,7 +108,13 @@ fun ExpenseChartsScreen() {
         CategoryDonutCard(categories, chartTotal)
         PaymentCards(paymentMethods.toList(), leakageRanking)
         CategoryFlowCard(categories, chartTotal)
-        ReconciliationCard(roomTotal, chartTotal, antTotal)
+        ReconciliationCard(
+            roomTotal = roomTotal,
+            chartTotal = chartTotal,
+            antTotal = dashboardState.antMonthlyClp,
+            projectedAnnualClp = dashboardState.projectedAnnualClp,
+            annualSavingsClp = dashboardState.annualSavingsClp
+        )
     }
 }
 
@@ -206,7 +223,9 @@ private fun CategoryFlowCard(
 private fun ReconciliationCard(
     roomTotal: Long,
     chartTotal: Long,
-    antTotal: Long
+    antTotal: Long,
+    projectedAnnualClp: Long = roomTotal * MONTHS_PER_YEAR,
+    annualSavingsClp: Long = antTotal * MONTHS_PER_YEAR
 ) {
     val consistent = chartTotal == roomTotal
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -214,9 +233,9 @@ private fun ReconciliationCard(
             Text("Conciliacion Room / Graficos / KPIs", style = MaterialTheme.typography.titleMedium)
             Text("Total Room (DAO): ${clp(roomTotal)}")
             Text("Suma por categorias: ${clp(chartTotal)}")
-            Text("Proyeccion anual: ${clp(roomTotal * MONTHS_PER_YEAR)}")
+            Text("Proyeccion anual: ${clp(projectedAnnualClp)}")
             Text("Gasto hormiga mensual: ${clp(antTotal)}")
-            Text("Ahorro potencial anual: ${clp(antTotal * MONTHS_PER_YEAR)}")
+            Text("Ahorro potencial anual: ${clp(annualSavingsClp)}")
             Text(if (consistent) "CONCILIACION OK: montos coinciden" else "REVISAR: montos no coinciden",
                 color = if (consistent) consistentColor else MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold)

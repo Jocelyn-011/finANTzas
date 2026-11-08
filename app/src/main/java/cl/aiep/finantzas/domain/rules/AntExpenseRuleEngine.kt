@@ -148,3 +148,109 @@ class AntExpenseRuleEngine(
         )
     }
 }
+
+/**
+ * Estados de salud presupuestaria por categoría basados en [FinancialThresholds].
+ */
+enum class BudgetHealthStatus(
+    val displayLabel: String,
+    val requiresAlert: Boolean
+) {
+    CONTROLADO(displayLabel = "Controlado", requiresAlert = false),
+    ALERTA_PREVENTIVA(displayLabel = "Alerta Preventiva", requiresAlert = true),
+    PRESUPUESTO_EXCEDIDO(displayLabel = "Presupuesto Excedido", requiresAlert = true)
+}
+
+/**
+ * Resultado inmutable de la evaluación de presupuesto en CLP ([Long]) y porcentaje entero ([Int]).
+ */
+data class CategoryBudgetEvaluation(
+    val category: String,
+    val spentAmountClp: Long,
+    val budgetLimitClp: Long,
+    val consumedPercentage: Int,
+    val status: BudgetHealthStatus
+) {
+    val isAlertActive: Boolean
+        get() = status.requiresAlert
+}
+
+/**
+ * Contrato extensible (Patrón Strategy - SOLID OCP) para clasificar el porcentaje de ejecución.
+ */
+fun interface BudgetThresholdPolicy {
+    fun resolveStatus(consumedPercentage: Int): BudgetHealthStatus
+}
+
+/**
+ * Política estándar apoyada estrictamente en las constantes de [FinancialThresholds].
+ */
+class DefaultBudgetThresholdPolicy(
+    private val warningPercentage: Int = FinancialThresholds.BUDGET_WARNING_PERCENTAGE,
+    private val criticalPercentage: Int = FinancialThresholds.BUDGET_CRITICAL_PERCENTAGE
+) : BudgetThresholdPolicy {
+    override fun resolveStatus(consumedPercentage: Int): BudgetHealthStatus = when {
+        consumedPercentage >= criticalPercentage -> BudgetHealthStatus.PRESUPUESTO_EXCEDIDO
+        consumedPercentage >= warningPercentage -> BudgetHealthStatus.ALERTA_PREVENTIVA
+        else -> BudgetHealthStatus.CONTROLADO
+    }
+}
+
+/**
+ * Evaluador seguro en CLP ([Long]) del estado de presupuesto por categoría.
+ */
+class BudgetStatusEvaluator(
+    private val policy: BudgetThresholdPolicy = DefaultBudgetThresholdPolicy()
+) {
+    fun evaluateCategory(
+        category: String,
+        spentAmountClp: Long,
+        budgetLimitClp: Long
+    ): CategoryBudgetEvaluation {
+        val safeSpentClp = spentAmountClp.coerceAtLeast(ZERO_BUDGET_CLP)
+        if (budgetLimitClp <= ZERO_BUDGET_CLP) {
+            return CategoryBudgetEvaluation(
+                category = category,
+                spentAmountClp = safeSpentClp,
+                budgetLimitClp = ZERO_BUDGET_CLP,
+                consumedPercentage = ZERO_CONSUMED_PERCENTAGE,
+                status = BudgetHealthStatus.CONTROLADO
+            )
+        }
+
+        val consumedPercentage =
+            ((safeSpentClp * FinancialAnalyticsCalculator.PERCENTAGE_MULTIPLIER) / budgetLimitClp).toInt()
+
+        return CategoryBudgetEvaluation(
+            category = category,
+            spentAmountClp = safeSpentClp,
+            budgetLimitClp = budgetLimitClp,
+            consumedPercentage = consumedPercentage,
+            status = policy.resolveStatus(consumedPercentage)
+        )
+    }
+
+    fun evaluateStatus(spentAmountClp: Long, budgetLimitClp: Long): BudgetHealthStatus =
+        evaluateCategory(
+            category = DEFAULT_EVALUATION_CATEGORY,
+            spentAmountClp = spentAmountClp,
+            budgetLimitClp = budgetLimitClp
+        ).status
+
+    companion object {
+        private const val ZERO_BUDGET_CLP: Long = 0L
+        private const val ZERO_CONSUMED_PERCENTAGE: Int = 0
+        private const val DEFAULT_EVALUATION_CATEGORY: String = "GENERAL"
+        private val defaultEvaluator = BudgetStatusEvaluator()
+
+        fun evaluateCategory(
+            category: String,
+            spentAmountClp: Long,
+            budgetLimitClp: Long
+        ): CategoryBudgetEvaluation =
+            defaultEvaluator.evaluateCategory(category, spentAmountClp, budgetLimitClp)
+
+        fun evaluateStatus(spentAmountClp: Long, budgetLimitClp: Long): BudgetHealthStatus =
+            defaultEvaluator.evaluateStatus(spentAmountClp, budgetLimitClp)
+    }
+}
