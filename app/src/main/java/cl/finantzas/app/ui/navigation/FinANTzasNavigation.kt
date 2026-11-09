@@ -51,6 +51,7 @@ import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.components.BudgetScreen
 import cl.finantzas.app.ui.components.ExpenseChartsScreen
 import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.components.SavingsSimulatorScreen
 import cl.finantzas.app.ui.components.activeExpenseUser
 import cl.finantzas.app.ui.theme.Petrol
 import cl.finantzas.app.ui.viewmodel.BudgetViewModel
@@ -187,7 +188,7 @@ private fun FinANTzasNavHost(
             ExpenseChartsScreen(expenseViewModel)
         }
         composable("simulador") {
-            PantallaTemporal("Simulador de Ahorro")
+            SavingsSimulatorScreen(expenseViewModel)
         }
         composable(RUTA_ALERTAS) {
             BudgetScreen(budgetViewModel)
