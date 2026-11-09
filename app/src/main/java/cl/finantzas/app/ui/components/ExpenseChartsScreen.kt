@@ -35,17 +35,13 @@ import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import cl.aiep.finantzas.domain.rules.PaymentInstrument
 import cl.aiep.finantzas.domain.rules.FinancialAnalyticsCalculator
 import cl.aiep.finantzas.domain.rules.ClpCurrencyFormatter
-import java.util.Locale
 
 private const val FULL_CIRCLE = 360f
 private const val START_ANGLE = -90f
 private const val PERCENT = 100f
-private const val MONTHS_PER_YEAR = 12L
 private const val LABEL_LENGTH = 20
 
-private val consistentColor = Color(0xFF16784C)
-
-private val chartColors = listOf(
+internal val expenseChartColors = listOf(
     Color(0xFF008577), Color(0xFFEF8C35), Color(0xFF5D68C4),
     Color(0xFFE15F73), Color(0xFF7B8A8B), Color(0xFF6D9F4A)
 )
@@ -87,6 +83,20 @@ fun ExpenseChartsScreen(viewModel: ExpenseViewModel) {
             .mapValues { (_, items) -> items.sumOf { it.monthlyImpactClp } }
             .toList().sortedByDescending { it.second }
     }
+    val sankeyCategories = remember(expenses) {
+        expenses.groupBy { it.category }
+            .map { (category, rows) ->
+                SankeyCategoryFlow(
+                    category = category,
+                    totalClp = rows.sumOf { it.monthlyImpactClp.coerceAtLeast(0L) },
+                    essentialClp = rows.filterNot { it.isAntExpense }
+                        .sumOf { it.monthlyImpactClp.coerceAtLeast(0L) },
+                    antExpenseClp = rows.filter { it.isAntExpense }
+                        .sumOf { it.monthlyImpactClp.coerceAtLeast(0L) }
+                )
+            }
+            .sortedByDescending { it.totalClp }
+    }
     val paymentMethods = remember(expenses) {
         expenses.groupBy { instrumentFor(it.paymentMethod) }
             .mapValues { (_, rows) -> rows.sumOf { it.monthlyImpactClp } }
@@ -103,14 +113,12 @@ fun ExpenseChartsScreen(viewModel: ExpenseViewModel) {
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Distribucion de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text("Datos reactivos desde Room (CLP)", style = MaterialTheme.typography.bodySmall)
+        Text("Distribución de gastos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         CategoryDonutCard(categories, chartTotal)
         PaymentCards(paymentMethods.toList(), leakageRanking)
-        CategoryFlowCard(categories, chartTotal)
-        ReconciliationCard(
-            roomTotal = roomTotal,
-            chartTotal = chartTotal,
+        CategoryFlowCard(sankeyCategories)
+        ExpenseSummaryCard(
+            monthlyTotal = roomTotal,
             antTotal = dashboardState.antMonthlyClp,
             projectedAnnualClp = dashboardState.projectedAnnualClp,
             annualSavingsClp = dashboardState.annualSavingsClp
@@ -125,7 +133,7 @@ private fun CategoryDonutCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Anillo por categoria", style = MaterialTheme.typography.titleMedium)
+            Text("Gastos por categoría", style = MaterialTheme.typography.titleMedium)
             if (chartTotal > 0L) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -136,7 +144,7 @@ private fun CategoryDonutCard(
                         var start = START_ANGLE
                         categories.forEachIndexed { index, pair ->
                             val sweep = FULL_CIRCLE * pair.second.toFloat() / chartTotal.toFloat()
-                            drawArc(chartColors[index % chartColors.size], start, sweep, false,
+                            drawArc(expenseChartColors[index % expenseChartColors.size], start, sweep, false,
                                 style = Stroke(width = stroke, cap = StrokeCap.Butt))
                             start += sweep
                         }
@@ -148,9 +156,9 @@ private fun CategoryDonutCard(
                 }
                 categories.forEachIndexed { index, (name, amount) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).background(chartColors[index % chartColors.size]))
+                        Box(Modifier.size(10.dp).background(expenseChartColors[index % expenseChartColors.size]))
                         Spacer(Modifier.width(8.dp))
-                        Text("$name: ${clp(amount)}", style = MaterialTheme.typography.bodySmall)
+                        Text("${name.toExpenseCategoryLabel()}: ${clp(amount)}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             } else Text("No hay gastos registrados.")
@@ -163,17 +171,17 @@ private fun PaymentCards(
     paymentMethods: List<Pair<PaymentInstrument, Long>>,
     leakageRanking: List<cl.aiep.finantzas.domain.rules.PaymentMethodLeakageResult>
 ) {
-    ChartCard("Anillo por medio de pago") {
+    ChartCard("Gastos por medio de pago") {
         if (paymentMethods.isNotEmpty()) {
             DonutChart(
                 amounts = paymentMethods.map { it.second },
                 labels = paymentMethods.map { it.first.displayName },
-                colors = chartColors
+                colors = expenseChartColors
             )
         } else Text("No hay gastos registrados.")
     }
 
-    ChartCard("Fuga por medio de pago (RN-04)") {
+    ChartCard("Gasto hormiga por medio de pago") {
         if (leakageRanking.isEmpty()) Text("No hay datos para representar.")
         leakageRanking.forEach { row ->
             Text(
@@ -186,61 +194,54 @@ private fun PaymentCards(
 }
 
 @Composable
-private fun CategoryFlowCard(
-    categories: List<Pair<String, Long>>,
-    chartTotal: Long
-) {
+private fun CategoryFlowCard(categories: List<SankeyCategoryFlow>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Flujo de gastos por categoria", style = MaterialTheme.typography.titleMedium)
+            Text("Distribución por categoría y tipo de gasto", style = MaterialTheme.typography.titleMedium)
             Text(
-            "Vista proporcional tipo Sankey: total mensual hacia categorias",
-            style = MaterialTheme.typography.bodySmall
-        )
-            if (chartTotal > 0L) {
-                Box(Modifier.fillMaxWidth().height(24.dp).background(MaterialTheme.colorScheme.primary))
-                Text("Total: ${clp(chartTotal)}", style = MaterialTheme.typography.labelMedium)
-                categories.forEachIndexed { index, (name, amount) ->
-                    val fraction = (amount.toDouble() / chartTotal.toDouble()).toFloat().coerceIn(0f, 1f)
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("$name - ${clp(amount)} (${String.format(Locale.US, "%.1f", fraction * PERCENT)}%)",
-                            style = MaterialTheme.typography.bodySmall)
-                        Box(
-                        Modifier.fillMaxWidth().height(16.dp).background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                            Box(Modifier.fillMaxWidth(fraction).height(16.dp)
-                                .background(chartColors[index % chartColors.size]))
-                        }
-                    }
-                }
-            } else Text("No hay datos para representar.")
+                "Sigue cómo se reparte tu gasto mensual.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (categories.any { it.totalClp > 0L }) {
+                SankeyDiagramCanvas(categories = categories)
+            } else {
+                Text("No hay datos para representar.")
+            }
         }
     }
-
 }
 
 @Composable
-private fun ReconciliationCard(
-    roomTotal: Long,
-    chartTotal: Long,
+private fun ExpenseSummaryCard(
+    monthlyTotal: Long,
     antTotal: Long,
-    projectedAnnualClp: Long = roomTotal * MONTHS_PER_YEAR,
-    annualSavingsClp: Long = antTotal * MONTHS_PER_YEAR
+    projectedAnnualClp: Long,
+    annualSavingsClp: Long
 ) {
-    val consistent = chartTotal == roomTotal
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Conciliacion Room / Graficos / KPIs", style = MaterialTheme.typography.titleMedium)
-            Text("Total Room (DAO): ${clp(roomTotal)}")
-            Text("Suma por categorias: ${clp(chartTotal)}")
-            Text("Proyeccion anual: ${clp(projectedAnnualClp)}")
-            Text("Gasto hormiga mensual: ${clp(antTotal)}")
-            Text("Ahorro potencial anual: ${clp(annualSavingsClp)}")
-            Text(if (consistent) "CONCILIACION OK: montos coinciden" else "REVISAR: montos no coinciden",
-                color = if (consistent) consistentColor else MaterialTheme.colorScheme.error,
-                fontWeight = FontWeight.Bold)
-            Text("Los datos se actualizan al modificar Room.", style = MaterialTheme.typography.bodySmall)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Resumen de gastos", style = MaterialTheme.typography.titleMedium)
+            SummaryMetric("Total mensual", monthlyTotal)
+            SummaryMetric("Proyección anual", projectedAnnualClp)
+            SummaryMetric("Gasto hormiga al mes", antTotal)
+            SummaryMetric("Ahorro potencial al año", annualSavingsClp)
+            Text(
+                "Estimación de ahorro si reduces los gastos hormiga.",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
+    }
+}
+
+@Composable
+private fun SummaryMetric(label: String, amount: Long) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(clp(amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }
 
