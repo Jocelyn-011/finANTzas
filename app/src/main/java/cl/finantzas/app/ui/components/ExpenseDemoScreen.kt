@@ -51,7 +51,10 @@ fun ExpenseDemoScreen() {
 }
 
 @Composable
-fun ExpenseDemoScreen(viewModel: ExpenseViewModel) {
+fun ExpenseDemoScreen(
+    viewModel: ExpenseViewModel,
+    modifier: Modifier = Modifier
+) {
     val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
@@ -72,7 +75,7 @@ fun ExpenseDemoScreen(viewModel: ExpenseViewModel) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
