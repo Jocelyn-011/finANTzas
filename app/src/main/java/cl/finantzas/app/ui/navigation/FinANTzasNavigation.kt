@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -111,11 +112,11 @@ private const val RUTA_BUDGETS = "alertas"
 private const val MIN_VISIBLE_BADGE_ALERTS = 1
 
 private val pantallasSmartphone = listOf(
-    Pantalla(RUTA_HOME, "Home", Icons.Outlined.Home),
-    Pantalla(RUTA_TRANSACTIONS, "Transactions", Icons.Outlined.SwapHoriz),
-    Pantalla(RUTA_NFC_PAY, "NFC Pay", Icons.Outlined.Nfc),
-    Pantalla(RUTA_INSIGHTS, "Insights", Icons.Outlined.BarChart),
-    Pantalla(RUTA_SETTINGS, "Settings", Icons.Outlined.Settings)
+    Pantalla(RUTA_HOME, "Inicio", Icons.Outlined.Home),
+    Pantalla(RUTA_TRANSACTIONS, "Transacciones", Icons.Outlined.SwapHoriz),
+    Pantalla(RUTA_NFC_PAY, "Pago NFC", Icons.Outlined.Nfc),
+    Pantalla(RUTA_INSIGHTS, "Análisis", Icons.Outlined.BarChart),
+    Pantalla(RUTA_SETTINGS, "Ajustes", Icons.Outlined.Settings)
 )
 
 private val itemsRailTablet = listOf(
@@ -547,6 +548,11 @@ private fun RowScope.ItemNavegacion(
                 text = pantalla.titulo,
                 maxLines = 1,
                 fontSize = 11.sp,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 8.sp,
+                    maxFontSize = 11.sp,
+                    stepSize = 0.25.sp
+                ),
                 fontWeight = if (seleccionada) FontWeight.Bold else FontWeight.Normal
             )
         },

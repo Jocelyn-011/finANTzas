@@ -1,0 +1,33 @@
+=== VALIDACION FINANTZAS / CLICKUP SUBTAREA 2 ===
+Fecha: 2026-11-07 01:41:14
+Rama: feature/optimizacion-flow-datos-clp
+Cambios en codigo Git: 3
+   M app/src/main/java/cl/finantzas/app/data/demo/ExpenseDemoDataClp.kt
+   M app/src/main/java/cl/finantzas/app/data/local/dao/ExpenseDao.kt
+   M app/src/main/java/cl/finantzas/app/ui/components/ExpenseDemoScreen.kt
+=== COMPROBACIONES ESTATICAS ===
+[OK] Datos demo: Cafe 3500
+[OK] Datos demo: Streaming 26900
+[OK] Datos demo: Arriendo 380000
+[OK] Datos demo: Bip 42000
+[OK] Boton restaurar presente
+[OK] DAO consulta gastos por usuario
+[OK] DAO consulta total mensual
+[OK] ViewModel usa StateFlow
+[OK] Persistencia cifrada SQLCipher
+Archivos UI relacionados con graficos: 0
+[REVISAR] Ruta de graficos implementada (no temporal)
+=== MONTOS ESPERADOS (4 IMPORTES MENSUALES) ===
+  Cafe: $3500
+  Streaming: $26900
+  Arriendo: $380000
+  Bip: $42000
+  TOTAL MENSUAL: $452400
+  PROYECCION ANUAL: $5428800
+=== COMPILACION ===
+BUILD SUCCESSFUL in 36s
+[OK] Gradle assembleDebug
+=== LIMITACIONES DE ESTA PRUEBA ===
+Este diagnostico no lee filas de la BD cifrada ni confirma graficos en pantalla.
+Para cerrar ClickUp: comprobar datos en app/emulador y visualizaciones reales.
+No incluye claves, valores de local.properties ni datos privados.
