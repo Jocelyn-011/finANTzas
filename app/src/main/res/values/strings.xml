@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">finANTzas</string>
+    <string name="nfc_hce_service_description">Billetera sin contacto finANTzas (CLP)</string>
+    <string name="nfc_hce_aid_group_description">Pagos sin contacto finANTzas en Pesos Chilenos</string>
 </resources>
