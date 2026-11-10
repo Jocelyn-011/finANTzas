@@ -50,9 +50,6 @@ Proyecto académico AIEP — Grupo 1.
 ## Organización del repositorio
 
 - `main`: rama principal del proyecto.
-- `feature/jocelyn`: desarrollo de Jocelyn.
-- `feature/alvaro`: desarrollo de Álvaro.
-- `feature/enrique`: desarrollo de Enrique.
 
 Los cambios deberán desarrollarse en ramas individuales e integrarse mediante pull requests.
 
