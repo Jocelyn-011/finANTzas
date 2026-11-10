@@ -478,7 +478,7 @@ fun SettingsScreen(
                             fontSize = 15.sp
                         )
                         Text(
-                            text = "Carrera de Ingeniería / Técnico en Programación y Análisis de Sistemas — Instituto Profesional AIEP:\n• Jocelyn Peñailillo\n• Enrique Ahumada\n• Álvaro Brizuela",
+                            text = "Carrera de Ingeniería / Técnico en Programación y Análisis de Sistemas — Instituto Profesional AIEP:\n• Jocelyn González\n• Enrique Ahumada\n• Álvaro Brizuela",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -610,7 +610,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "(d) Propiedad Intelectual:\nDiseño, motor de reglas de negocio, arquitectura de seguridad y código fuente desarrollados por el equipo integrado por Jocelyn Peñailillo, Enrique Ahumada y Álvaro Brizuela en el Instituto Profesional AIEP.",
+                            text = "(d) Propiedad Intelectual:\nDiseño, motor de reglas de negocio, arquitectura de seguridad y código fuente desarrollados por el equipo integrado por Jocelyn González, Enrique Ahumada y Álvaro Brizuela en el Instituto Profesional AIEP.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
