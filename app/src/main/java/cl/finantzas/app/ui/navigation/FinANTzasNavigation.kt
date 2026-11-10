@@ -51,6 +51,7 @@ import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.components.BudgetScreen
 import cl.finantzas.app.ui.components.ExpenseChartsScreen
 import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.components.NfcWalletScreen
 import cl.finantzas.app.ui.components.SavingsSimulatorScreen
 import cl.finantzas.app.ui.components.activeExpenseUser
 import cl.finantzas.app.ui.theme.Petrol
@@ -194,7 +195,7 @@ private fun FinANTzasNavHost(
             BudgetScreen(budgetViewModel)
         }
         composable("nfc") {
-            PantallaTemporal("Billetera NFC")
+            NfcWalletScreen()
         }
     }
 }
