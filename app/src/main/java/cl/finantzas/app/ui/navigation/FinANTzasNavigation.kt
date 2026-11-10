@@ -58,6 +58,7 @@ import cl.finantzas.app.ui.theme.Petrol
 import cl.finantzas.app.ui.viewmodel.BudgetViewModel
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import cl.finantzas.app.workers.BudgetSyncScheduler
+import cl.finantzas.app.ui.components.NfcWalletScreen
 
 private data class Pantalla(
     val ruta: String,
@@ -195,7 +196,7 @@ private fun FinANTzasNavHost(
             BudgetScreen(budgetViewModel)
         }
         composable("nfc") {
-            PantallaTemporal("Billetera NFC")
+            NfcWalletScreen()
         }
     }
 }
