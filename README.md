@@ -49,7 +49,3 @@ Proyecto académico AIEP — Grupo 1.
 ## Organización del repositorio
 
 - `main` contiene la versión principal; los cambios se integran desde ramas de trabajo mediante pull requests.
-
-## Estado del proyecto
-
-**En desarrollo.** Las funcionalidades principales están implementadas. La tarea de auditoría OWASP MASVS y compilación APK con R8 figura pendiente en ClickUp (3 de 4 puntos completados).
