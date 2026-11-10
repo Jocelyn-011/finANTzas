@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,13 +22,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.aiep.finantzas.domain.rules.AntExpenseRuleEngine
 import cl.finantzas.app.data.demo.ExpenseDemoDataClp
 import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
 import cl.finantzas.app.data.repository.RoomExpenseRepository
+import cl.finantzas.app.ui.theme.EmeraldAccent
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
 import cl.finantzas.app.workers.ExpenseSyncScheduler
 import java.util.UUID
@@ -59,7 +63,6 @@ fun ExpenseDemoScreen(
     val context = LocalContext.current.applicationContext
     val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
     val repository = remember(dao) { RoomExpenseRepository(dao) }
-    val dashboardState by viewModel.uiState.collectAsState()
     val expenses by viewModel.expenses.collectAsState()
     val scope = rememberCoroutineScope()
     val ruleEngine = remember { AntExpenseRuleEngine() }
@@ -79,13 +82,11 @@ fun ExpenseDemoScreen(
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            KpiCards(uiState = dashboardState)
-        }
-
+        // Mitad Superior: Tarjeta Registrar Nuevo Gasto
         item {
             ExpenseRegistrationForm { candidate, manuallyConfirmedAsAnt ->
                 val verdict = ruleEngine.evaluate(candidate)
+                val finalIsAnt = manuallyConfirmedAsAnt
                 val expense = ExpenseEntityClp(
                     id = UUID.randomUUID().toString(),
                     userId = userId,
@@ -96,16 +97,16 @@ fun ExpenseDemoScreen(
                     expenseType = candidate.type.name,
                     category = candidate.category.name,
                     paymentMethod = candidate.paymentMethodCode,
-                    isAntExpense = manuallyConfirmedAsAnt || verdict.isAntExpense,
-                    triggeredRuleCode = if (manuallyConfirmedAsAnt) {
-                        "RN-01"
-                    } else {
-                        verdict.triggeredRuleCode
+                    isAntExpense = finalIsAnt,
+                    triggeredRuleCode = when {
+                        finalIsAnt && verdict.isAntExpense -> verdict.triggeredRuleCode
+                        finalIsAnt -> "RN-01"
+                        else -> "ESSENTIAL"
                     },
-                    ruleReason = if (manuallyConfirmedAsAnt) {
-                        "Gasto hormiga confirmado manualmente (RN-01)."
-                    } else {
-                        verdict.description.orEmpty()
+                    ruleReason = when {
+                        finalIsAnt && verdict.isAntExpense -> verdict.description.orEmpty()
+                        finalIsAnt -> "Gasto hormiga confirmado manualmente (RN-01)."
+                        else -> "Clasificado como gasto esencial."
                     },
                     createdAt = System.currentTimeMillis()
                 )
@@ -115,10 +116,13 @@ fun ExpenseDemoScreen(
             }
         }
 
+        // Mitad Inferior: Historial de Pagos
         item {
             Text(
-                "Movimientos registrados (${filteredExpenses.size})",
-                style = MaterialTheme.typography.titleMedium
+                text = "Historial de Pagos (${filteredExpenses.size})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -135,7 +139,10 @@ fun ExpenseDemoScreen(
                     if (expenses.isEmpty()) "Todavía no hay gastos. Registra uno arriba para comenzar."
                     else "No hay movimientos que coincidan con este filtro.",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 )
             }
         } else {
@@ -184,8 +191,6 @@ fun ExpenseDemoScreen(
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Registro mensual", style = MaterialTheme.typography.titleMedium)
-                MonthlyExpenseEntry(repository, userId)
                 Button(
                     onClick = {
                         if (!restoring) {
@@ -208,9 +213,13 @@ fun ExpenseDemoScreen(
                         }
                     },
                     enabled = !restoring && userId == LOCAL_EXPENSE_USER,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EmeraldAccent,
+                        contentColor = Color.White
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (restoring) "Restaurando..." else "Restaurar datos de ejemplo")
+                    Text(if (restoring) "Restaurando..." else "Restaurar datos de ejemplo CLP")
                 }
                 restoreError?.let { message ->
                     Text(message, color = MaterialTheme.colorScheme.error)
@@ -223,7 +232,7 @@ fun ExpenseDemoScreen(
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("Eliminar gasto") },
-            text = { Text("¿Quieres eliminar «${expense.concept}» del registro?") },
+            text = { Text("¿Quieres eliminar «${expense.concept}» del historial?") },
             confirmButton = {
                 TextButton(
                     onClick = {

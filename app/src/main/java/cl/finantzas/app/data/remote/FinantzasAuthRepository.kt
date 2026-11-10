@@ -35,4 +35,8 @@ class FinantzasAuthRepository {
     fun currentUserId(): String? {
         return auth.currentUserOrNull()?.id
     }
+
+    fun currentUserEmail(): String? {
+        return auth.currentUserOrNull()?.email
+    }
 }

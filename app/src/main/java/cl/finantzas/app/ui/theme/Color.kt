@@ -1,9 +1,16 @@
-
 package cl.finantzas.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Colores oficiales de finANTzas
+// Paleta Dark Petrol & Emerald (Fotografía 10)
+val DarkPetrolBg = Color(0xFF0B252E)
+val DarkPetrolCard = Color(0xFF123540)
+val DarkPetrolBorder = Color(0xFF1E4E5D)
+val EmeraldAccent = Color(0xFF1B9E77)
+val MintBright = Color(0xFF34D399)
+val CoralHormiga = Color(0xFFF46036)
+
+// Colores oficiales de finANTzas (compatibilidad con pantallas existentes)
 val Petrol = Color(0xFF0F4C5C)
 val Emerald = Color(0xFF1B7F5C)
 val AlertaHormiga = Color(0xFFE11D48)
