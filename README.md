@@ -10,13 +10,11 @@ La aplicación está desarrollada en Kotlin utilizando Jetpack Compose y Materia
 
 ## Funcionalidades
 
-- **Registro:** visualización de indicadores de gastos mensuales, proyección anual, gastos hormiga y ahorro potencial.
-- **Gráficos:** módulo previsto para visualizar información financiera mediante gráficos Sankey, anillos y porcentajes.
-- **Simulador:** módulo previsto para realizar proyecciones de ahorro.
-- **Alertas:** módulo previsto para notificaciones y seguimiento de presupuestos.
-- **Wallet NFC:** módulo reservado para funcionalidades de billetera NFC.
-
-Actualmente se encuentra implementada la estructura visual, la navegación entre módulos y las tarjetas de indicadores KPI con datos iniciales de prueba. Las demás funcionalidades están pendientes de desarrollo.
+- Autenticación, registro de gastos en CLP y clasificación de gastos hormiga mediante un motor de reglas.
+- Indicadores, gráficos de anillos y Sankey, y simulador de ahorro con escenarios del 25 %, 50 % y 100 %.
+- Presupuestos por categoría y alertas de gasto.
+- Billetera NFC de demostración, con componentes HCE, biometría y firma HMAC. No se han validado pagos bancarios reales.
+- Persistencia local y sincronización de gastos con Supabase.
 
 ## Tecnologías utilizadas
 
@@ -25,6 +23,8 @@ Actualmente se encuentra implementada la estructura visual, la navegación entre
 - Jetpack Compose
 - Material Design 3
 - Navigation Compose
+- Room, SQLCipher y WorkManager
+- Supabase y Dagger Hilt
 - Gradle
 - Git y GitHub
 
@@ -43,18 +43,13 @@ Proyecto académico AIEP — Grupo 1.
    `git clone https://github.com/Jocelyn-011/finANTzas.git`
 
 2. Abrir la carpeta del proyecto en Android Studio.
-3. Esperar a que finalice la sincronización de Gradle.
-4. Seleccionar un emulador Android compatible.
-5. Ejecutar la aplicación.
+3. Configurar la URL y la clave publicable de Supabase en `local.properties` con los nombres `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`.
+4. Esperar la sincronización de Gradle y ejecutar la aplicación en un dispositivo o emulador con Android 8.0 (API 26) o superior.
 
 ## Organización del repositorio
 
-- `main`: rama principal del proyecto.
-
-Los cambios deberán desarrollarse en ramas individuales e integrarse mediante pull requests.
+- `main` contiene la versión principal; los cambios se integran desde ramas de trabajo mediante pull requests.
 
 ## Estado del proyecto
 
-**En desarrollo.**
-
-Primera versión: estructura visual, tarjetas KPI, tema y navegación funcional entre cinco módulos.
+**En desarrollo.** Las funcionalidades principales están implementadas. La tarea de auditoría OWASP MASVS y compilación APK con R8 figura pendiente en ClickUp (3 de 4 puntos completados).
