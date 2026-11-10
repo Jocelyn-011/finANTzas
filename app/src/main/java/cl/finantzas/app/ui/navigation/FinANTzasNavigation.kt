@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -53,6 +51,8 @@ import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.components.BudgetScreen
 import cl.finantzas.app.ui.components.ExpenseChartsScreen
 import cl.finantzas.app.ui.components.ExpenseDemoScreen
+import cl.finantzas.app.ui.components.NfcWalletScreen
+import cl.finantzas.app.ui.components.SavingsSimulatorScreen
 import cl.finantzas.app.ui.components.activeExpenseUser
 import cl.finantzas.app.ui.theme.Petrol
 import cl.finantzas.app.ui.viewmodel.BudgetViewModel
@@ -190,7 +190,7 @@ private fun FinANTzasNavHost(
             ExpenseChartsScreen(expenseViewModel)
         }
         composable("simulador") {
-            PantallaTemporal("Simulador de Ahorro")
+            SavingsSimulatorScreen(expenseViewModel)
         }
         composable(RUTA_ALERTAS) {
             BudgetScreen(budgetViewModel)
@@ -315,7 +315,7 @@ private fun RowScope.ItemNavegacion(
 @Composable
 private fun PantallaRegistro(expenseViewModel: ExpenseViewModel) {
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
@@ -324,7 +324,10 @@ private fun PantallaRegistro(expenseViewModel: ExpenseViewModel) {
             color = Petrol
         )
 
-        ExpenseDemoScreen(viewModel = expenseViewModel)
+        ExpenseDemoScreen(
+            viewModel = expenseViewModel,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
