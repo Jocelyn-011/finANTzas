@@ -42,8 +42,10 @@ enum class ExpenseType {
  * Categorías de gastos evaluadas por el motor de reglas.
  */
 enum class ExpenseCategory {
-    MICRO_PURCHASES_AND_SNACKS,
+    HOUSING_AND_UTILITIES,
     FOOD_AND_GROCERIES,
+    TRANSPORT_AND_MOBILITY,
+    MICRO_PURCHASES_AND_SNACKS,
     ENTERTAINMENT_SUBSCRIPTIONS
 }
 

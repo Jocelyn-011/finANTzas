@@ -3,1480 +3,712 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>finANTzas — Prototipo Interactivo de Control de Gastos y Gasto Hormiga</title>
+  <title>finANTzas — Dashboard Dark Petrol & Emerald (CLP)</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: #f1f5f9;
-      color: #0f172a;
+      background-color: #0B252E;
+      color: #FFFFFF;
     }
-    .sankey-link {
-      fill: none;
-      transition: stroke-opacity 0.2s ease;
+    input[type="range"] {
+      accent-color: #34D399;
     }
-    .sankey-link:hover {
-      stroke-opacity: 0.85 !important;
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
     }
-    @keyframes pulseRing {
-      0% { transform: scale(0.92); opacity: 0.9; }
-      70% { transform: scale(1.25); opacity: 0; }
-      100% { transform: scale(1.25); opacity: 0; }
+    ::-webkit-scrollbar-track {
+      background: #0B252E;
     }
-    .nfc-wave {
-      animation: pulseRing 1.8s infinite;
+    ::-webkit-scrollbar-thumb {
+      background: #1E4E5D;
+      border-radius: 9999px;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="bg-[#0B252E] text-white min-h-screen flex flex-col">
 
-  <!-- Top Header -->
-  <header class="bg-[#0F4C5C] text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-xl font-extrabold shadow-inner">
-          🐜
+  <!-- Reusable SVG Ant Symbol Definition -->
+  <svg class="hidden" aria-hidden="true">
+    <symbol id="finantzas-ant-icon" viewBox="0 0 42 24">
+      <g transform="rotate(-16 21 12)" fill="#FFFFFF" stroke="#FFFFFF" stroke-linecap="round">
+        <!-- Abdomen -->
+        <ellipse cx="29" cy="12" rx="6.5" ry="4.5" />
+        <!-- Thorax -->
+        <ellipse cx="19.5" cy="12.5" rx="4" ry="2.8" />
+        <!-- Head -->
+        <circle cx="12.5" cy="12.5" r="2.8" />
+        <!-- Antennae -->
+        <line x1="10.5" y1="10.5" x2="6" y2="5.5" stroke-width="1.6" />
+        <line x1="11.5" y1="10" x2="9" y2="4.5" stroke-width="1.6" />
+        <!-- Legs -->
+        <line x1="17" y1="14.5" x2="13.5" y2="20.5" stroke-width="1.6" />
+        <line x1="20" y1="14.5" x2="20" y2="21" stroke-width="1.6" />
+        <line x1="22.5" y1="14.5" x2="26.5" y2="20.5" stroke-width="1.6" />
+      </g>
+    </symbol>
+  </svg>
+
+  <!-- Ventana / Modal de Inicio de Sesión (AuthGate / AuthScreen Dark Petrol) -->
+  <div id="loginModal" class="fixed inset-0 z-50 bg-[#0B252E]/95 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="w-full max-w-[420px] bg-[#123540] border border-[#1E4E5D] rounded-[20px] p-7 shadow-2xl">
+      <!-- FinANTzasBrandLogo -->
+      <div class="flex justify-center pt-3 pb-2">
+        <div class="inline-flex items-baseline text-3xl tracking-tight select-none">
+          <span class="font-semibold text-white">fin</span>
+          <span class="font-extrabold text-[#34D399]">ANT</span>
+          <span class="relative font-semibold text-white">
+            <svg class="w-8 h-5 absolute -top-3.5 left-0.5 pointer-events-none">
+              <use href="#finantzas-ant-icon"></use>
+            </svg>
+            zas
+          </span>
+        </div>
+      </div>
+
+      <h2 id="authTitle" class="text-center text-xl font-bold text-white mt-2 mb-6">Iniciar sesión</h2>
+
+      <form id="authForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-white/75 mb-1">Correo electrónico</label>
+          <input id="authEmail" type="email" required value="tomas.a@finantzas.cl"
+            class="w-full rounded-xl bg-[#0B252E] border border-[#1E4E5D] focus:border-[#34D399] focus:outline-none px-3.5 py-2.5 text-sm text-white placeholder-white/40"
+            placeholder="usuario@finantzas.cl" />
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl font-extrabold tracking-tight">fin<span class="text-emerald-300">ANT</span>zas</h1>
-            <span class="text-xs bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 px-2 py-0.5 rounded-full font-semibold">
-              Android Studio + Kotlin • Moneda CLP
-            </span>
-          </div>
-          <p class="text-xs text-slate-200">Equipo: Jocelyn, Enrique y Álvaro • Control Mensual, Motor de Gasto Hormiga y Escalabilidad NFC</p>
+          <label class="block text-xs font-medium text-white/75 mb-1">Contraseña</label>
+          <input id="authPassword" type="password" required value="••••••••••••"
+            class="w-full rounded-xl bg-[#0B252E] border border-[#1E4E5D] focus:border-[#34D399] focus:outline-none px-3.5 py-2.5 text-sm text-white placeholder-white/40"
+            placeholder="••••••••" />
         </div>
-      </div>
+        <button type="submit"
+          class="w-full h-12 rounded-full bg-[#1B9E77] hover:bg-[#158463] text-white font-bold text-sm transition shadow-lg">
+          Ingresar
+        </button>
+      </form>
 
-      <!-- User Profile / Active Alert Pill -->
-      <div class="flex items-center gap-3">
-        <div id="headerAlertBadge" class="hidden sm:flex items-center gap-1.5 bg-amber-500/20 border border-amber-300/40 text-amber-100 px-3 py-1 rounded-full text-xs font-medium">
-          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-          <span id="headerAlertText">2 alertas de presupuesto</span>
-        </div>
-        <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg text-xs">
-          <span class="font-semibold text-emerald-300">👤 Usuario Registrado</span>
-          <span class="text-slate-300 hidden md:inline">(Autoadministrador)</span>
-        </div>
+      <div class="text-center mt-4">
+        <button id="toggleAuthModeBtn" type="button" class="text-xs font-semibold text-[#34D399] hover:underline">
+          Crear una cuenta nueva
+        </button>
       </div>
     </div>
-
-    <!-- Navigation Tabs -->
-    <nav class="bg-[#093440] border-t border-white/10">
-      <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar gap-1 py-1.5">
-        <button id="tabBtn-dashboard" data-tab="dashboard" class="nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition bg-emerald-600 text-white shadow">
-          1. Registro y Motor Hormiga
-        </button>
-        <button id="tabBtn-analytics" data-tab="analytics" class="nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition text-slate-200 hover:bg-white/10">
-          2. Sankey, Anillos y % Fuga
-        </button>
-        <button id="tabBtn-simulator" data-tab="simulator" class="nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition text-slate-200 hover:bg-white/10">
-          3. Simulador 25% / 50% / 100%
-        </button>
-        <button id="tabBtn-budgets" data-tab="budgets" class="nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition text-slate-200 hover:bg-white/10">
-          4. Alertas y Presupuestos
-        </button>
-        <button id="tabBtn-nfc" data-tab="nfc" class="nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition text-amber-200 hover:bg-white/10">
-          5. Escalabilidad: App Wallet NFC
-        </button>
-      </div>
-    </nav>
-  </header>
-
-  <!-- Toast Notification Banner -->
-  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-emerald-500/50 flex items-start gap-3">
-    <span id="toastIcon" class="text-lg">🐜</span>
-    <div class="text-xs leading-relaxed" id="toastMessage">Acción completada</div>
   </div>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1 space-y-6">
+  <!-- Toast Notification -->
+  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm bg-[#123540] text-white px-4 py-3 rounded-xl shadow-2xl border border-[#34D399] flex items-center gap-3">
+    <span id="toastIcon" class="text-lg">🐜</span>
+    <div id="toastMessage" class="text-xs font-medium leading-relaxed">Acción completada en CLP</div>
+  </div>
 
-    <!-- Top KPI Strip (Always Visible Across Views) -->
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Gasto Mensual Total</span>
-          <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-medium">Mes Actual</span>
-        </div>
-        <div id="kpiMonthlyTotal" class="text-2xl font-extrabold text-slate-900 mt-1">$0</div>
-        <p id="kpiBudgetStatus" class="text-xs text-slate-500 mt-1">Sobre presupuesto mensual</p>
-      </div>
+  <!-- ADAPTIVE LAYOUT CONTAINER (Smartphone < md vs Tablet/Desktop >= md) -->
+  <div class="flex-1 flex flex-col md:flex-row min-h-screen">
 
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Proyección Gasto Anual</span>
-          <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">12 Meses</span>
-        </div>
-        <div id="kpiAnnualTotal" class="text-2xl font-extrabold text-[#0F4C5C] mt-1">$0</div>
-        <p class="text-xs text-slate-500 mt-1">Incluye compras, pagos y suscripciones</p>
-      </div>
-
-      <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-l-rose-500 border border-slate-200">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-rose-600">Fuga «Gasto Hormiga» / Mes</span>
-          <span id="kpiAntShareBadge" class="text-xs px-2 py-0.5 bg-rose-100 text-rose-700 rounded font-bold">0%</span>
-        </div>
-        <div id="kpiMonthlyAnt" class="text-2xl font-extrabold text-rose-600 mt-1">$0</div>
-        <p id="kpiAntCountText" class="text-xs text-slate-500 mt-1">Detectado por motor + manual</p>
-      </div>
-
-      <div class="bg-gradient-to-br from-[#0F4C5C] to-emerald-700 text-white rounded-xl p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-200">Ahorro Potencial al Año</span>
-          <span class="text-xs px-2 py-0.5 bg-white/20 text-white rounded font-semibold">Meta 100%</span>
-        </div>
-        <div id="kpiAnnualSavings" class="text-2xl font-extrabold text-white mt-1">$0</div>
-        <p id="kpiHalfSavingsText" class="text-xs text-emerald-100 mt-1">O ahorra $0 reduciendo solo el 50%</p>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 1: DASHBOARD, REGISTRO & MOTOR HORMIGA
-         ========================================== -->
-    <section id="view-dashboard" class="space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Form: Registrar Gasto / Pago / Suscripción -->
-        <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-[#0F4C5C]">Registrar Salida Mensual</h2>
-              <p class="text-xs text-slate-500">Compras, pagos fijos o suscripciones con evaluación automática</p>
-            </div>
-            <span class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold">
-              Motor RN Activo
+    <!-- LEFT NAVIGATION RAIL (Desktop / Tablet Dashboard — 210px, bg-[#123540]) -->
+    <aside class="hidden md:flex md:flex-col w-[210px] shrink-0 bg-[#123540] border-r border-[#1E4E5D] p-4 justify-between">
+      <div>
+        <!-- Brand Logo finANTzas with White Tilted Ant over "zas" -->
+        <div class="flex justify-center pt-3 pb-6">
+          <div class="inline-flex items-baseline text-2xl tracking-tight select-none">
+            <span class="font-semibold text-white">fin</span>
+            <span class="font-extrabold text-[#34D399]">ANT</span>
+            <span class="relative font-semibold text-white">
+              <svg class="w-7 h-4 absolute -top-3 left-0.5 pointer-events-none">
+                <use href="#finantzas-ant-icon"></use>
+              </svg>
+              zas
             </span>
           </div>
-
-          <form id="expenseForm" class="space-y-3.5">
-            <div>
-              <label for="expConcept" class="block text-xs font-semibold text-slate-700 mb-1">Concepto / Descripción del Gasto</label>
-              <input id="expConcept" type="text" required placeholder="Ej. Café latte y snack de media mañana"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="expAmount" class="block text-xs font-semibold text-slate-700 mb-1">Monto Unitario ($ CLP sin decimales)</label>
-                <input id="expAmount" type="number" step="100" min="100" required value="3500"
-                  class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-              </div>
-              <div>
-                <label for="expType" class="block text-xs font-semibold text-slate-700 mb-1">Tipo de Salida</label>
-                <select id="expType" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
-                  <option value="Compra">Compra Recurrente / Puntual</option>
-                  <option value="Suscripción">Suscripción Mensual</option>
-                  <option value="Pago Fijo">Pago de Servicio / Fijo</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="expCategory" class="block text-xs font-semibold text-slate-700 mb-1">Categoría</label>
-                <select id="expCategory" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
-                  <option value="Micro-compras y Snacks">Micro-compras y Snacks</option>
-                  <option value="Suscripciones de Entretenimiento">Suscripciones de Entretenimiento</option>
-                  <option value="Alimentación y Supermercado">Alimentación y Supermercado</option>
-                  <option value="Transporte y Movilidad">Transporte y Movilidad</option>
-                  <option value="Vivienda y Servicios">Vivienda y Servicios</option>
-                </select>
-              </div>
-              <div>
-                <label for="expPayment" class="block text-xs font-semibold text-slate-700 mb-1">Medio de Pago</label>
-                <select id="expPayment" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
-                  <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                  <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Transferencia">Transferencia</option>
-                  <option value="Billetera NFC">Billetera NFC (App)</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="expFreq" class="block text-xs font-semibold text-slate-700 mb-1">Repeticiones por Semana</label>
-                <select id="expFreq" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
-                  <option value="0.25">1 vez al mes (Mensual fijo)</option>
-                  <option value="1">1 vez por semana (4/mes)</option>
-                  <option value="2">2 veces por semana (8/mes)</option>
-                  <option value="3">3 veces por semana (12/mes)</option>
-                  <option value="4" selected>4 veces por semana (>3/sem)</option>
-                  <option value="5">5 veces por semana (>3/sem)</option>
-                  <option value="7">Diario - 7 veces/sem (>3/sem)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Impacto Mensual Estimado</label>
-                <div id="liveMonthlyImpact" class="w-full rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm font-bold text-[#0F4C5C]">
-                  $56.000 / mes
-                </div>
-              </div>
-            </div>
-
-            <!-- Live Rule Engine Evaluation Box -->
-            <div id="rulePreviewBox" class="rounded-xl p-3 bg-rose-50 border border-rose-200 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-rose-800 flex items-center gap-1.5">
-                  <span>🐜 Diagnóstico del Motor de Reglas:</span>
-                </span>
-                <span id="ruleBadgeText" class="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-600 text-white">
-                  GASTO HORMIGA DETECTADO
-                </span>
-              </div>
-              <p id="ruleReasonText" class="text-xs text-rose-700">
-                Regla RN-02 activada: Micro-transacción de bajo valor que se repite más de 3 veces por semana (4 veces/sem).
-              </p>
-              <label class="flex items-center gap-2 pt-1 cursor-pointer select-none">
-                <input id="expManualOverride" type="checkbox" checked class="rounded text-rose-600 focus:ring-rose-500 h-4 w-4" />
-                <span class="text-xs font-medium text-slate-700">Confirmar etiqueta como «Gasto Hormiga» (Permite ajuste manual)</span>
-              </label>
-            </div>
-
-            <button type="submit" class="w-full bg-[#0F4C5C] hover:bg-[#093440] text-white font-semibold py-2.5 px-4 rounded-lg text-sm shadow transition flex items-center justify-center gap-2">
-              <span>+ Registrar Gasto en mi Cuenta</span>
-            </button>
-          </form>
         </div>
 
-        <!-- Right Table: Listado de Gastos Mensuales y Motor de Reglas -->
-        <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-[#0F4C5C]">Movimientos Mensuales y Clasificación Hormiga</h2>
-              <p class="text-xs text-slate-500">Haz clic en el botón de estado para cambiar manualmente entre Esencial y Gasto Hormiga</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <select id="filterMode" class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white font-medium text-slate-700">
-                <option value="all">Ver Todos los Gastos</option>
-                <option value="ant">Solo Gastos Hormiga 🐜</option>
-                <option value="sub">Solo Suscripciones 🔄</option>
-                <option value="essential">Solo Gastos Esenciales ✅</option>
-              </select>
-              <select id="filterPayment" class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs bg-white font-medium text-slate-700">
-                <option value="all">Todos los Medios de Pago</option>
-                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia</option>
-                <option value="Billetera NFC">Billetera NFC</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto flex-1">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500 bg-slate-50">
-                  <th class="py-2.5 px-3">Concepto y Regla</th>
-                  <th class="py-2.5 px-2">Categoría</th>
-                  <th class="py-2.5 px-2">Medio Pago</th>
-                  <th class="py-2.5 px-2 text-right">Total Mes</th>
-                  <th class="py-2.5 px-2 text-center">Clasificación</th>
-                  <th class="py-2.5 px-2 text-center">Acción</th>
-                </tr>
-              </thead>
-              <tbody id="expensesTableBody" class="divide-y divide-slate-100 text-xs">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-
-          <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
-            <span>💡 <strong>Reglas automáticas:</strong> Micro-compras &gt;3 veces/sem o Suscripciones de Entretenimiento.</span>
-            <button id="btnResetDemoData" type="button" class="text-emerald-700 hover:underline font-semibold">
-              Restaurar datos de ejemplo
-            </button>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 2: ANALÍTICA (SANKEY + ANILLOS + % FUGA MEDIO DE PAGO)
-         ========================================== -->
-    <section id="view-analytics" class="hidden space-y-6">
-      <!-- Diagrama de Sankey -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-4">
-          <div>
-            <h2 class="text-base font-bold text-[#0F4C5C]">Diagrama de Sankey — Flujo Mensual de Dinero y Fuga Hormiga</h2>
-            <p class="text-xs text-slate-500">Visualiza cómo tu gasto mensual se distribuye por categorías y cuánto termina en Gasto Esencial vs. Fuga «Gasto Hormiga»</p>
-          </div>
-          <div class="flex items-center gap-4 text-xs font-semibold">
-            <span class="flex items-center gap-1.5 text-emerald-700"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> Gasto Esencial</span>
-            <span class="flex items-center gap-1.5 text-rose-600"><span class="w-3 h-3 rounded-sm bg-rose-500 inline-block"></span> Fuga Gasto Hormiga</span>
-          </div>
-        </div>
-
-        <div class="w-full overflow-x-auto">
-          <svg id="sankeySvg" viewBox="0 0 920 360" class="w-full h-auto min-w-[680px] bg-slate-50/60 rounded-xl border border-slate-100"></svg>
-        </div>
-      </div>
-
-      <!-- Dos gráficos: Anillo Categorías + Anillo/Fuga por Medio de Pago -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Anillo por Categorías -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <h3 class="text-base font-bold text-[#0F4C5C]">Distribución de Gastos por Categorías (Anillo)</h3>
-          <p class="text-xs text-slate-500 mb-4">Proporción del gasto mensual total absorbido por cada categoría</p>
-          <div class="relative h-72 w-full">
-            <canvas id="categoryDonutChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Medio de Pago y % de Fuga -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
-          <div>
-            <h3 class="text-base font-bold text-[#0F4C5C]">División por Medio de Pago y % de Fuga Hormiga</h3>
-            <p class="text-xs text-slate-500 mb-4">Identifica qué medio de pago facilita mayor porcentaje de gasto innecesario</p>
-            <div class="relative h-56 w-full mb-4">
-              <canvas id="paymentDonutChart"></canvas>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-100 pt-3">
-            <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Ranking de Porcentaje de Fuga por Medio de Pago</h4>
-            <div id="paymentLeakageList" class="space-y-2">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 3: SIMULADOR DE AHORRO (25%, 50%, 100%)
-         ========================================== -->
-    <section id="view-simulator" class="hidden space-y-6">
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
-          <div>
-            <h2 class="text-base font-bold text-[#0F4C5C]">Simulador de Ahorro — Reducción del 25%, 50% o 100% del Gasto Hormiga</h2>
-            <p class="text-xs text-slate-500">Proyección interactiva mes a mes (12 meses) y anual según el nivel de control de tus gastos hormiga</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button type="button" data-sim="0.25" class="sim-Scenario-btn px-3.5 py-2 rounded-lg text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-100 transition">
-              Escenario 25%
-            </button>
-            <button type="button" data-sim="0.50" class="sim-Scenario-btn px-3.5 py-2 rounded-lg text-xs font-bold border border-emerald-600 bg-emerald-50 text-emerald-800 transition">
-              Escenario 50% (Recomendado)
-            </button>
-            <button type="button" data-sim="1.00" class="sim-Scenario-btn px-3.5 py-2 rounded-lg text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-100 transition">
-              Escenario 100% (Cero Hormiga)
-            </button>
-          </div>
-        </div>
-
-        <!-- 3 Scenario Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div id="simCard25" class="rounded-xl p-4 border border-slate-200 bg-slate-50/70 transition">
-            <span class="text-xs font-bold uppercase text-sky-700 bg-sky-100 px-2.5 py-0.5 rounded-full">Reducción Suave (25%)</span>
-            <div id="sim25Annual" class="text-2xl font-extrabold text-slate-900 mt-2">$0 <span class="text-xs font-normal text-slate-500">/ año</span></div>
-            <div id="sim25Monthly" class="text-xs font-semibold text-sky-700 mt-1">Ahorro mensual: $0 / mes</div>
-            <p class="text-xs text-slate-500 mt-2">Eliminando 1 de cada 4 micro-compras o compartiendo una suscripción.</p>
-          </div>
-
-          <div id="simCard50" class="rounded-xl p-4 border-2 border-emerald-500 bg-emerald-50/40 transition shadow-sm">
-            <span class="text-xs font-bold uppercase text-emerald-800 bg-emerald-200 px-2.5 py-0.5 rounded-full">Reducción Media (50%)</span>
-            <div id="sim50Annual" class="text-2xl font-extrabold text-emerald-800 mt-2">$0 <span class="text-xs font-normal text-slate-600">/ año</span></div>
-            <div id="sim50Monthly" class="text-xs font-semibold text-emerald-700 mt-1">Ahorro mensual: $0 / mes</div>
-            <p class="text-xs text-slate-600 mt-2">Reduciendo a la mitad tus compras repetitivas (&gt;3/sem) y suscripciones ociosas.</p>
-          </div>
-
-          <div id="simCard100" class="rounded-xl p-4 border border-slate-200 bg-slate-50/70 transition">
-            <span class="text-xs font-bold uppercase text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">Reducción Total (100%)</span>
-            <div id="sim100Annual" class="text-2xl font-extrabold text-slate-900 mt-2">$0 <span class="text-xs font-normal text-slate-500">/ año</span></div>
-            <div id="sim100Monthly" class="text-xs font-semibold text-indigo-700 mt-1">Ahorro mensual: $0 / mes</div>
-            <p class="text-xs text-slate-500 mt-2">Suprimiendo el 100% de las fugas catalogadas como Gasto Hormiga.</p>
-          </div>
-        </div>
-
-        <!-- Chart + Month-by-Month Table -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div class="lg:col-span-7 bg-slate-50 rounded-xl p-4 border border-slate-200">
-            <h3 class="text-sm font-bold text-[#0F4C5C] mb-1">Curva de Ahorro Acumulado Mes a Mes (Mes 1 a Mes 12)</h3>
-            <p class="text-xs text-slate-500 mb-3">Comparativa simultánea de capital ahorrado en los tres escenarios</p>
-            <div class="relative h-72 w-full">
-              <canvas id="savingsProjectionChart"></canvas>
-            </div>
-          </div>
-
-          <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div class="bg-[#0F4C5C] text-white px-4 py-2.5 flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider">Tabla Proyección Mes a Mes</span>
-              <span id="simActiveLabel" class="text-[11px] bg-emerald-500/30 px-2 py-0.5 rounded text-emerald-100">Resaltado: 50%</span>
-            </div>
-            <div class="max-h-72 overflow-y-auto">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                    <th class="py-2 px-3">Mes</th>
-                    <th class="py-2 px-2 text-right">Ahorro 25%</th>
-                    <th class="py-2 px-2 text-right text-emerald-700">Ahorro 50%</th>
-                    <th class="py-2 px-3 text-right text-indigo-700">Ahorro 100%</th>
-                  </tr>
-                </thead>
-                <tbody id="simulationTableBody" class="divide-y divide-slate-100">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 4: ALERTAS Y PRESUPUESTOS
-         ========================================== -->
-    <section id="view-budgets" class="hidden space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Config Panel -->
-        <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
-          <div class="border-b border-slate-100 pb-3">
-            <h2 class="text-base font-bold text-[#0F4C5C]">Configurar Presupuesto Mensual y por Categoría</h2>
-            <p class="text-xs text-slate-500">Modifica los límites para probar en vivo el disparo de alertas preventivas (&ge;75%) y críticas (&ge;100%)</p>
-          </div>
-
-          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            <label for="globalBudgetInput" class="block text-xs font-bold text-[#0F4C5C] mb-1">
-              Presupuesto Mensual Global Máximo ($ CLP)
-            </label>
-            <div class="flex items-center gap-3">
-              <input id="globalBudgetInput" type="number" step="10000" min="50000" value="950000"
-                class="w-36 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-              <span class="text-xs text-slate-500">Alerta general si la suma de categorías lo supera</span>
-            </div>
-          </div>
-
-          <div id="categoryBudgetInputs" class="space-y-3">
-            <!-- Populated by JS -->
-          </div>
-
-          <button id="btnSaveBudgets" type="button" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm shadow transition">
-            Guardar y Recalcular Alertas de Presupuesto
+        <!-- Pill Navigation Items -->
+        <nav class="space-y-1.5" id="desktopRailNav">
+          <button data-nav="dashboard" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold bg-[#1B9E77] text-white transition">
+            <span>⊞</span>
+            <span>Dashboard</span>
           </button>
-        </div>
-
-        <!-- Right Monitor Panel -->
-        <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h2 class="text-base font-bold text-[#0F4C5C]">Estado de Alertas y Semáforo por Categoría</h2>
-              <p class="text-xs text-slate-500">Monitoreo en tiempo real del consumo mensual frente al límite configurado</p>
-            </div>
-            <div class="flex items-center gap-2 text-[11px] font-semibold">
-              <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">&lt;75% OK</span>
-              <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">75–99% Alerta</span>
-              <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800">&ge;100% Excedido</span>
-            </div>
-          </div>
-
-          <div id="budgetStatusCards" class="space-y-3.5">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
+          <button data-nav="analytics" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition">
+            <span>📊</span>
+            <span>Analytics</span>
+          </button>
+          <button data-nav="wallet" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition">
+            <span>💳</span>
+            <span>Wallet</span>
+          </button>
+          <button data-nav="goals" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition">
+            <span>🎯</span>
+            <span>Goals</span>
+          </button>
+          <button data-nav="simulator" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition">
+            <span>🧮</span>
+            <span>Simulator</span>
+          </button>
+          <button data-nav="settings" class="rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition">
+            <span>⚙️</span>
+            <span>Settings</span>
+          </button>
+        </nav>
       </div>
-    </section>
 
-    <!-- ==========================================
-         VIEW 5: ESCALABILIDAD — APP BILLETERA NFC (FASE 2)
-         ========================================== -->
-    <section id="view-nfc" class="hidden space-y-6">
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <div class="border-b border-slate-100 pb-3 mb-5 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">
-              Demostración de Arquitectura Escalable (Fase 2)
-            </span>
-            <h2 class="text-base font-bold text-[#0F4C5C] mt-1">Integración Automática: App Billetera Móvil NFC &rarr; Plataforma Web finANTzas</h2>
-            <p class="text-xs text-slate-500">Simula un pago sin contacto (NFC) con el celular en un comercio físico y observa cómo viaja por la API REST hasta registrarse en la web</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          
-          <!-- Smartphone NFC Wallet Mockup -->
-          <div class="lg:col-span-5 flex justify-center">
-            <div class="w-80 bg-slate-900 text-white rounded-[32px] p-5 shadow-xl border-4 border-slate-700 space-y-4">
-              <div class="flex items-center justify-between text-xs text-slate-400">
-                <span>finANTzas Wallet NFC</span>
-                <span class="text-emerald-400 font-semibold">● NFC Activo</span>
-              </div>
-
-              <!-- Virtual Tokenized Card -->
-              <div class="bg-gradient-to-br from-emerald-600 to-[#0F4C5C] rounded-2xl p-4 shadow-md space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold tracking-wider uppercase text-emerald-100">Tarjeta Tokenizada</span>
-                  <span class="text-sm font-extrabold">)))) NFC</span>
-                </div>
-                <div class="text-base font-mono tracking-widest text-white">•••• •••• •••• 4829</div>
-                <div class="flex items-center justify-between text-[11px] text-emerald-100">
-                  <span>TITULAR: USUARIO FINANTZAS</span>
-                  <span>VISA CONTACTLESS</span>
-                </div>
-              </div>
-
-              <!-- Contactless Wave Indicator -->
-              <div class="flex flex-col items-center py-2">
-                <div class="relative flex items-center justify-center w-14 h-14">
-                  <div class="absolute inset-0 rounded-full bg-emerald-500/30 nfc-wave"></div>
-                  <div class="relative w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center text-lg font-bold shadow">
-                    📲
-                  </div>
-                </div>
-                <span class="text-xs text-slate-300 mt-2 font-medium">Elige un comercio para pagar con NFC:</span>
-              </div>
-
-              <!-- 3 One-Tap NFC Payment Buttons -->
-              <div class="space-y-2">
-                <button type="button" data-nfc="coffee" class="nfc-pay-btn w-full bg-slate-800 hover:bg-emerald-600 border border-slate-700 rounded-xl p-2.5 text-left transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-white">☕ Cafetería Express (NFC)</div>
-                    <div class="text-[11px] text-slate-300">Micro-compra repetitiva (5x/sem)</div>
-                  </div>
-                  <span class="text-xs font-extrabold text-emerald-300">$3.200</span>
-                </button>
-
-                <button type="button" data-nfc="streaming" class="nfc-pay-btn w-full bg-slate-800 hover:bg-emerald-600 border border-slate-700 rounded-xl p-2.5 text-left transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-white">🎮 Pase Gaming Cloud (NFC)</div>
-                    <div class="text-[11px] text-slate-300">Suscripción de Entretenimiento</div>
-                  </div>
-                  <span class="text-xs font-extrabold text-emerald-300">$12.990</span>
-                </button>
-
-                <button type="button" data-nfc="grocery" class="nfc-pay-btn w-full bg-slate-800 hover:bg-emerald-600 border border-slate-700 rounded-xl p-2.5 text-left transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-white">🛒 Mercado Vecinal (NFC)</div>
-                    <div class="text-[11px] text-slate-300">Compra de Alimentación (1x/sem)</div>
-                  </div>
-                  <span class="text-xs font-extrabold text-emerald-300">$24.500</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- API Webhook & Real-time Sync Log -->
-          <div class="lg:col-span-7 space-y-4">
-            <div class="bg-slate-900 text-slate-100 rounded-xl p-4 border border-slate-800">
-              <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
-                <span class="text-xs font-mono font-bold text-emerald-400">POST /api/v1/transactions/nfc-webhook</span>
-                <span id="nfcStatusBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono">
-                  Esperando lectura NFC...
-                </span>
-              </div>
-              <pre id="nfcPayloadViewer" class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed">{
-  "evento": "NFC_CONTACTLESS_AUTHORIZED",
-  "origen": "finANTzas_Mobile_Wallet_v2",
-  "instruccion": "Haz clic en uno de los botones NFC del teléfono para inyectar la compra automáticamente en la web."
-}</pre>
-            </div>
-
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
-              <h3 class="text-sm font-bold text-[#0F4C5C]">¿Cómo garantiza esta arquitectura la escalabilidad del proyecto?</h3>
-              <ul class="text-xs text-slate-700 space-y-1.5 list-disc pl-4">
-                <li><strong>Backend Desacoplado Orientado a API:</strong> El mismo motor de reglas que hoy procesa el formulario web recibe peticiones JSON desde la futura App móvil Billetera NFC.</li>
-                <li><strong>Trazabilidad de Medio de Pago:</strong> Las compras recibidas desde la app quedan etiquetadas bajo el medio <em>«Billetera NFC»</em>, permitiendo medir su porcentaje de fuga en los diagramas de la pestaña 2.</li>
-                <li><strong>Sincronización Instantánea:</strong> Al pulsar cualquier pago NFC de prueba a la izquierda, la compra se inserta inmediatamente en el listado general, el Diagrama de Sankey y el Simulador Anual.</li>
-              </ul>
-            </div>
-          </div>
-
-        </div>
+      <!-- Open Login Modal Button -->
+      <div class="pt-4 border-t border-[#1E4E5D]">
+        <button id="openLoginBtnDesktop" class="w-full py-2 px-3 rounded-xl border border-[#1E4E5D] text-xs font-semibold text-[#34D399] hover:bg-[#0B252E] transition">
+          🔐 Ventana Login
+        </button>
       </div>
-    </section>
+    </aside>
 
-  </main>
+    <!-- MAIN CONTENT PANEL -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- MOBILE TOP BAR (Visible on < md) -->
+      <header class="md:hidden flex items-center justify-between px-4 pt-5 pb-3 bg-[#0B252E]">
+        <button id="openLoginBtnMobile" class="text-xs px-2.5 py-1 rounded-lg bg-[#123540] border border-[#1E4E5D] text-[#34D399] font-semibold">
+          Login
+        </button>
+        <div class="inline-flex items-baseline text-2xl tracking-tight select-none">
+          <span class="font-semibold text-white">fin</span>
+          <span class="font-extrabold text-[#34D399]">ANT</span>
+          <span class="relative font-semibold text-white">
+            <svg class="w-7 h-4 absolute -top-3 left-0.5 pointer-events-none">
+              <use href="#finantzas-ant-icon"></use>
+            </svg>
+            zas
+          </span>
+        </div>
+        <button id="mobileBellBtn" class="relative p-2 text-white">
+          🔔
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#F46036]"></span>
+        </button>
+      </header>
+
+      <!-- DESKTOP / TABLET HEADER ("¡Hola, Tomás!" + Notification Bell + Avatar) -->
+      <header class="hidden md:flex items-center justify-between px-6 pt-5 pb-3">
+        <h1 class="text-2xl font-bold text-white">¡Hola, Tomás!</h1>
+        <div class="flex items-center gap-4">
+          <button id="desktopBellBtn" class="relative p-2 rounded-full hover:bg-[#123540] transition" title="Alertas activas">
+            <span class="text-lg">🔔</span>
+            <span id="alertDot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#F46036]"></span>
+          </button>
+          <div class="w-9 h-9 rounded-full bg-[#1B9E77] border border-[#34D399] flex items-center justify-center font-bold text-sm">
+            TA
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEWPORT CONTENT -->
+      <main class="flex-1 px-4 md:px-6 pb-24 md:pb-6 space-y-5 max-w-7xl w-full mx-auto">
+
+        <!-- =============================================================== -->
+        <!-- SMARTPHONE COMPACT WALLET VIEW (Shown on mobile or "Wallet" tab) -->
+        <!-- =============================================================== -->
+        <section id="mobileWalletSection" class="md:hidden max-w-md mx-auto space-y-4">
+          <!-- 3D Card "TarDigital" -->
+          <div class="relative h-48 rounded-[20px] p-5 flex flex-col justify-between border border-[#1E4E5D] shadow-xl"
+               style="background: linear-gradient(135deg, #134E5E 0%, #1B9E77 100%);">
+            <div class="flex items-center justify-between">
+              <span class="text-xl font-semibold text-white tracking-wide">TarDigital</span>
+              <div class="flex items-center">
+                <span class="w-5 h-5 rounded-full bg-white/65 inline-block"></span>
+                <span class="w-5 h-5 rounded-full bg-white/45 inline-block -ml-2"></span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <!-- Silver Chip -->
+              <div class="w-11 h-8 rounded-md bg-gradient-to-br from-slate-200 via-slate-400 to-slate-300 border border-slate-600 relative overflow-hidden">
+                <div class="absolute inset-y-0 left-1/3 w-px bg-slate-600/60"></div>
+                <div class="absolute inset-y-0 right-1/3 w-px bg-slate-600/60"></div>
+                <div class="absolute inset-x-0 top-1/2 h-px bg-slate-600/60"></div>
+              </div>
+              <span class="text-white font-bold text-xl tracking-tighter">))))</span>
+            </div>
+
+            <div class="text-base font-medium text-white">Tomás A.</div>
+          </div>
+
+          <!-- Pager Dots -->
+          <div class="flex justify-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-white/35"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-white/35"></span>
+          </div>
+
+          <!-- Pill Button ")))) NFC tap-to-pay" -->
+          <button id="nfcTapToPayBtn"
+            class="w-full h-12 rounded-full bg-[#123540] border border-[#34D399]/80 hover:bg-[#1B9E77]/30 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition">
+            <span class="text-[#34D399] font-bold">))))</span>
+            <span>NFC tap-to-pay</span>
+          </button>
+
+          <!-- Card "Quick overview" -->
+          <div class="bg-[#123540] border border-[#1E4E5D] rounded-[18px] p-4 space-y-3.5">
+            <div class="flex items-center justify-between">
+              <span class="text-base font-semibold text-white">Quick overview</span>
+              <div class="w-24 h-2 bg-[#0B252E] rounded-full overflow-hidden">
+                <div class="w-3/5 h-full bg-[#34D399] rounded-full"></div>
+              </div>
+            </div>
+
+            <div id="mobileQuickOverviewList" class="space-y-3">
+              <!-- Populated dynamically in CLP without decimals -->
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================================== -->
+        <!-- UNIFIED TABLET / DESKTOP DASHBOARD (Right side of Photo 10)     -->
+        <!-- =============================================================== -->
+        <section id="desktopDashboardGrid" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          <!-- LEFT COLUMN (7 cols): 2x2 KPI Cards + Sankey "Flujo de Dinero" -->
+          <div class="lg:col-span-7 space-y-5">
+
+            <!-- 2x2 KPI Grid with Mini Sparklines -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <!-- Card 1: Balance -->
+              <div class="bg-[#123540] border border-[#1E4E5D] rounded-[14px] p-4 flex flex-col justify-between">
+                <span class="text-xs font-medium text-white/75">Balance</span>
+                <div id="kpiBalanceClp" class="text-2xl font-extrabold text-white mt-2">$850.000 CLP</div>
+              </div>
+
+              <!-- Card 2: Ingresos / Gasto Mensual -->
+              <div class="bg-[#123540] border border-[#1E4E5D] rounded-[14px] p-4 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">Gasto Mensual</div>
+                  <div id="kpiMonthlyClp" class="text-base font-bold text-white mt-1">$355.000 CLP</div>
+                  <div class="text-[11px] text-white/60 mt-0.5">Flujo mensual CLP</div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5">
+                  <span class="text-[11px] font-bold text-[#34D399]">▲ +18%</span>
+                  <svg class="w-16 h-6" viewBox="0 0 64 24" fill="none">
+                    <path d="M2 18 C14 13, 22 16, 34 9 C44 11, 52 6, 62 4" stroke="#34D399" stroke-width="2.2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Card 3: Proyección Anual -->
+              <div class="bg-[#123540] border border-[#1E4E5D] rounded-[14px] p-4 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">Proyección Anual</div>
+                  <div id="kpiProjectedClp" class="text-base font-bold text-white mt-1">$135.900 CLP</div>
+                  <div class="text-[11px] text-white/60 mt-0.5">Proyección 12 meses</div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5">
+                  <span class="text-[11px] font-bold text-[#34D399]">▲ +15%</span>
+                  <svg class="w-16 h-6" viewBox="0 0 64 24" fill="none">
+                    <path d="M2 19 C16 15, 26 14, 38 15 C48 9, 54 7, 62 5" stroke="#34D399" stroke-width="2.2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Card 4: Gastos / Fuga Hormiga -->
+              <div class="bg-[#123540] border border-[#1E4E5D] rounded-[14px] p-4 flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white">Fuga Gasto Hormiga</div>
+                  <div id="kpiAntClp" class="text-base font-bold text-white mt-1">$28.250 CLP</div>
+                  <div class="text-[11px] text-white/60 mt-0.5">Microcompras / mes</div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5">
+                  <span class="text-[11px] font-bold text-[#F46036]">▼ -25%</span>
+                  <svg class="w-16 h-6" viewBox="0 0 64 24" fill="none">
+                    <path d="M2 6 C14 10, 24 8, 36 15 C46 12, 54 17, 62 19" stroke="#F46036" stroke-width="2.2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card "Flujo de Dinero" (Sankey Diagram Canvas in CLP) -->
+            <div class="bg-[#123540] border border-[#1E4E5D] rounded-[16px] p-5 space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-base font-bold text-white">Flujo de Dinero</h2>
+                <span id="sankeyTotalLabel" class="text-xs font-bold text-[#34D399]">$355.000 CLP</span>
+              </div>
+
+              <!-- 3-Stage Bezier Sankey SVG matching Photo 10 -->
+              <div class="w-full overflow-hidden">
+                <svg viewBox="0 0 540 210" class="w-full h-52">
+                  <!-- Left -> Center Ribbons -->
+                  <path d="M 18 22 C 130 22, 145 45, 256 45 L 256 125 C 145 125, 130 115, 18 115 Z"
+                        fill="#7DD3FC" fill-opacity="0.38" />
+                  <path d="M 18 125 C 130 125, 145 125, 256 125 L 256 155 C 145 155, 130 155, 18 155 Z"
+                        fill="#1B9E77" fill-opacity="0.45" />
+                  <path d="M 18 165 C 130 165, 145 155, 256 155 L 256 175 C 145 175, 130 195, 18 195 Z"
+                        fill="#34D399" fill-opacity="0.45" />
+
+                  <!-- Center -> Right Ribbons -->
+                  <!-- Top Output: Gastos / Fuga Hormiga -->
+                  <path d="M 264 45 C 380 45, 395 20, 522 20 L 522 92 C 395 92, 380 105, 264 105 Z"
+                        fill="#64748B" fill-opacity="0.45" />
+                  <!-- Bottom Output: Ahorros / Esencial -->
+                  <path d="M 264 105 C 380 105, 395 118, 522 118 L 522 185 C 395 185, 380 175, 264 175 Z"
+                        fill="#1B9E77" fill-opacity="0.55" />
+
+                  <!-- Vertical Bars -->
+                  <!-- Left Mint Bars -->
+                  <rect x="10" y="22" width="8" height="93" rx="3" fill="#34D399" />
+                  <rect x="10" y="125" width="8" height="30" rx="3" fill="#34D399" />
+                  <rect x="10" y="165" width="8" height="30" rx="3" fill="#34D399" />
+
+                  <!-- Center Sky Bar -->
+                  <rect x="256" y="45" width="8" height="130" rx="3" fill="#7DD3FC" />
+
+                  <!-- Right Coral & Emerald Bars -->
+                  <rect x="522" y="20" width="8" height="72" rx="3" fill="#F46036" />
+                  <rect x="522" y="118" width="8" height="67" rx="3" fill="#1B9E77" />
+
+                  <!-- Labels in crisp white -->
+                  <text x="26" y="95" fill="#FFFFFF" font-size="11" font-weight="600">Ingresos</text>
+                  <text x="26" y="185" fill="#FFFFFF" font-size="11" font-weight="600">Presupuesto</text>
+                  <text x="215" y="118" fill="#FFFFFF" font-size="11" font-weight="600">Flujo</text>
+                  <text x="470" y="60" fill="#FFFFFF" font-size="11" font-weight="600">Gastos</text>
+                  <text x="468" y="155" fill="#FFFFFF" font-size="11" font-weight="600">Ahorros</text>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Transaction Movements List (ExpenseMovementComponents style) -->
+            <div class="bg-[#123540] border border-[#1E4E5D] rounded-[16px] p-5 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Movimientos Recientes (CLP sin decimales)</h3>
+                <button id="addDemoAntExpenseBtn" class="text-xs px-3 py-1.5 rounded-full bg-[#1B9E77] hover:bg-[#158463] text-white font-semibold transition">
+                  + Registrar Gasto Hormiga
+                </button>
+              </div>
+              <div id="desktopTransactionsList" class="space-y-2.5">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN (5 cols): Donut "Gastos por Categoría" + "Simulador de Ahorro" -->
+          <div class="lg:col-span-5 space-y-5">
+
+            <!-- Card "Gastos por Categoría" -->
+            <div class="bg-[#123540] border border-[#1E4E5D] rounded-[16px] p-5 space-y-4">
+              <h2 class="text-base font-bold text-white">Gastos por Categoría</h2>
+              <div class="h-48 flex items-center justify-center">
+                <canvas id="categoryDonutCanvas"></canvas>
+              </div>
+              <div id="categoryLegendList" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-white/90">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Card "Simulador de Ahorro" -->
+            <div class="bg-[#123540] border border-[#1E4E5D] rounded-[16px] p-5 space-y-4">
+              <h2 class="text-base font-bold text-white">Simulador de Ahorro</h2>
+
+              <!-- 3 Pill Buttons: 25%, 50%, 100% -->
+              <div class="grid grid-cols-3 gap-2.5">
+                <button type="button" data-pct="25" class="sim-pill-btn py-2 rounded-[10px] text-xs font-bold border border-[#1E4E5D] bg-[#0B252E] text-white transition">
+                  25%
+                </button>
+                <button type="button" data-pct="50" class="sim-pill-btn py-2 rounded-[10px] text-xs font-bold border border-[#1B9E77] bg-[#1B9E77] text-white transition">
+                  50%
+                </button>
+                <button type="button" data-pct="100" class="sim-pill-btn py-2 rounded-[10px] text-xs font-bold border border-[#1E4E5D] bg-[#0B252E] text-white transition">
+                  100%
+                </button>
+              </div>
+
+              <!-- Quick actions switch -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-white">Quick actions</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input id="quickActionsToggle" type="checkbox" checked class="sr-only peer">
+                  <div class="w-10 h-5 bg-[#0B252E] border border-[#1E4E5D] rounded-full peer peer-checked:bg-[#1B9E77] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                </label>
+              </div>
+
+              <!-- Slider 1: Fine-tune % reduction -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-white/85">Reducción gasto hormiga</span>
+                  <span id="simPercentLabel" class="font-bold text-[#34D399]">50%</span>
+                </div>
+                <input id="simPercentSlider" type="range" min="5" max="100" value="50" class="w-full cursor-pointer" />
+              </div>
+
+              <!-- Slider 2: Months projected (1 to 12) -->
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-white/85">Meses proyectados</span>
+                  <span id="simMonthsLabel" class="font-bold text-[#34D399]">12 meses</span>
+                </div>
+                <input id="simMonthsSlider" type="range" min="1" max="12" value="12" class="w-full cursor-pointer" />
+              </div>
+
+              <!-- Projected CLP summary -->
+              <div class="pt-2 border-t border-[#1E4E5D] flex items-end justify-between">
+                <div class="text-xs text-white/75 space-y-1">
+                  <div>Ahorro mensual proyectado:</div>
+                  <div>Proyección acumulada:</div>
+                </div>
+                <div class="text-right space-y-0.5">
+                  <div id="simMonthlyClp" class="text-xs font-semibold text-white">$14.125 CLP</div>
+                  <div id="simAnnualClp" class="text-sm font-extrabold text-[#34D399]">$169.500 CLP</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <!-- MOBILE BOTTOM NAVIGATION BAR (< md) -->
+      <nav class="md:hidden fixed bottom-0 inset-x-0 bg-[#123540] border-t border-[#1E4E5D] px-2 py-2 flex justify-around items-center z-40">
+        <button data-mob-view="wallet" class="mob-nav-btn flex flex-col items-center gap-0.5 text-[#34D399] font-bold text-[11px]">
+          <span>🏠</span>
+          <span>Home</span>
+        </button>
+        <button data-mob-view="dashboard" class="mob-nav-btn flex flex-col items-center gap-0.5 text-white/70 text-[11px]">
+          <span>⇄</span>
+          <span>Transactions</span>
+        </button>
+        <button data-mob-view="wallet" class="mob-nav-btn flex flex-col items-center gap-0.5 text-white/70 text-[11px]">
+          <span>))))</span>
+          <span>NFC Pay</span>
+        </button>
+        <button data-mob-view="dashboard" class="mob-nav-btn flex flex-col items-center gap-0.5 text-white/70 text-[11px]">
+          <span>📊</span>
+          <span>Insights</span>
+        </button>
+        <button id="mobSettingsLoginBtn" class="flex flex-col items-center gap-0.5 text-white/70 text-[11px]">
+          <span>⚙️</span>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+    </div>
+  </div>
 
   <script>
-    // =========================================================
-    // ESTADO INICIAL EN MEMORIA (finANTzas)
-    // =========================================================
-    const INITIAL_EXPENSES = [
-      { id: 1, concept: "Café de grano camino a clases/trabajo", unitAmount: 3500, freqPerWeek: 5, type: "Compra", category: "Micro-compras y Snacks", payment: "Tarjeta de Crédito", isAnt: true, ruleReason: "RN-02: Micro-compra repetida >3 veces/sem (5x/sem)" },
-      { id: 2, concept: "Snacks y bebidas en minimarket", unitAmount: 2800, freqPerWeek: 4, type: "Compra", category: "Micro-compras y Snacks", payment: "Efectivo", isAnt: true, ruleReason: "RN-02: Micro-compra repetida >3 veces/sem (4x/sem)" },
-      { id: 3, concept: "Netflix + Spotify + Disney+ (Combo Streaming)", unitAmount: 26900, freqPerWeek: 0.25, type: "Suscripción", category: "Suscripciones de Entretenimiento", payment: "Tarjeta de Crédito", isAnt: true, ruleReason: "RN-03: Suscripción de Entretenimiento" },
-      { id: 4, concept: "Compra semanal de supermercado", unitAmount: 65000, freqPerWeek: 1, type: "Compra", category: "Alimentación y Supermercado", payment: "Tarjeta de Débito", isAnt: false, ruleReason: "Gasto Esencial" },
-      { id: 5, concept: "Arriendo, luz, agua e internet hogar", unitAmount: 380000, freqPerWeek: 0.25, type: "Pago Fijo", category: "Vivienda y Servicios", payment: "Transferencia", isAnt: false, ruleReason: "Gasto Esencial" },
-      { id: 6, concept: "Viajes cortos en app de transporte por prisa", unitAmount: 4500, freqPerWeek: 4, type: "Compra", category: "Transporte y Movilidad", payment: "Tarjeta de Crédito", isAnt: true, ruleReason: "RN-02: Micro-transacción repetida >3 veces/sem (4x/sem)" },
-      { id: 7, concept: "Carga mensual tarjeta Bip! / Transporte público", unitAmount: 42000, freqPerWeek: 0.25, type: "Pago Fijo", category: "Transporte y Movilidad", payment: "Tarjeta de Débito", isAnt: false, ruleReason: "Gasto Esencial" },
-      { id: 8, concept: "Postre o antojo nocturno por delivery", unitAmount: 5500, freqPerWeek: 4, type: "Compra", category: "Micro-compras y Snacks", payment: "Billetera NFC", isAnt: true, ruleReason: "RN-02: Micro-compra repetida >3 veces/sem (4x/sem)" }
+    const clpFormatter = new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      maximumFractionDigits: 0
+    });
+
+    function formatClp(amount) {
+      return clpFormatter.format(Math.round(amount));
+    }
+
+    const transactionsClp = [
+      { concept: 'Ingresos Mensuales', subtitle: "Aug 1'21 · Transferencia", amountClp: 850000, isAnt: false, isIncome: true },
+      { concept: 'Supermercado & Alimentación', subtitle: "Aug 1'21 · Tarjeta Débito", amountClp: 195000, isAnt: false, isIncome: false },
+      { concept: 'Café Grano Centro (NFC)', subtitle: '5x/sem · Microcompras y snacks', amountClp: 28250, isAnt: true, isIncome: false },
+      { concept: 'Suscripciones Streaming', subtitle: 'Mensual fijo · Entretenimiento', amountClp: 68000, isAnt: true, isIncome: false }
     ];
 
-    const INITIAL_BUDGETS = {
-      global: 950000,
-      categories: {
-        "Vivienda y Servicios": 400000,
-        "Alimentación y Supermercado": 280000,
-        "Transporte y Movilidad": 110000,
-        "Micro-compras y Snacks": 90000,
-        "Suscripciones de Entretenimiento": 25000
-      }
-    };
+    const categoryPalette = ['#38A3A5', '#2EC4B6', '#F46036', '#F6AA1C'];
+    let donutChart = null;
+    let selectedSimPercent = 50;
+    let selectedSimMonths = 12;
 
-    let expenses = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
-    let budgets = JSON.parse(JSON.stringify(INITIAL_BUDGETS));
-    let nextId = 100;
-    let activeSimRate = 0.50;
-
-    // Chart instances
-    let categoryChartInstance = null;
-    let paymentChartInstance = null;
-    let savingsChartInstance = null;
-
-    // Helper: Calculate monthly amount from unitAmount and freqPerWeek
-    // freqPerWeek === 0.25 means once a month (1x/month), otherwise freqPerWeek * 4 weeks
-    function getMonthlyCost(exp) {
-      const multiplier = exp.freqPerWeek === 0.25 ? 1 : exp.freqPerWeek * 4;
-      return Math.round(exp.unitAmount * multiplier);
+    function showToast(msg, icon = '🐜') {
+      const banner = document.getElementById('toastBanner');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastMessage').textContent = msg;
+      banner.classList.remove('hidden');
+      setTimeout(() => banner.classList.add('hidden'), 3200);
     }
 
-    function formatCurrency(val) {
-      return "$" + Math.round(Number(val)).toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    }
+    function renderTransactions() {
+      const mobileList = document.getElementById('mobileQuickOverviewList');
+      const desktopList = document.getElementById('desktopTransactionsList');
+      mobileList.innerHTML = '';
+      desktopList.innerHTML = '';
 
-    // Helper: Evaluate Ant-Expense Rule Engine
-    function evaluateAntRule(unitAmount, freqPerWeek, category, type) {
-      if (category === "Suscripciones de Entretenimiento") {
-        return {
-          isAutoAnt: true,
-          reason: "RN-03 activada: Suscripción de Entretenimiento auditable como Gasto Hormiga."
-        };
-      }
-      if (freqPerWeek > 3 && unitAmount <= 15000) {
-        return {
-          isAutoAnt: true,
-          reason: `RN-02 activada: Micro-transacción de bajo valor (${formatCurrency(unitAmount)} CLP) repetida >3 veces/semana (${freqPerWeek}x/sem).`
-        };
-      }
-      if (category === "Micro-compras y Snacks" && freqPerWeek >= 3) {
-        return {
-          isAutoAnt: true,
-          reason: "RN-02 activada: Frecuencia elevada en categoría de Micro-compras y Snacks."
-        };
-      }
-      return {
-        isAutoAnt: false,
-        reason: "Clasificado por defecto como Gasto Esencial / Regular (puedes marcarlo manualmente si lo consideras innecesario)."
-      };
-    }
+      transactionsClp.forEach(item => {
+        const badgeBg = item.isAnt ? 'rgba(244, 96, 54, 0.2)' : 'rgba(27, 158, 119, 0.2)';
+        const badgeColor = item.isAnt ? '#F46036' : '#34D399';
+        const sign = item.isIncome ? '' : '-';
 
-    function showToast(msg, icon = "🐜") {
-      const banner = document.getElementById("toastBanner");
-      document.getElementById("toastIcon").textContent = icon;
-      document.getElementById("toastMessage").textContent = msg;
-      banner.classList.remove("hidden");
-      if (window._toastTimer) clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => {
-        banner.classList.add("hidden");
-      }, 3600);
-    }
-
-    // =========================================================
-    // ACTUALIZACIÓN GLOBAL DE KPIS Y VISTAS
-    // =========================================================
-    function updateAllViews() {
-      const totalMonthly = expenses.reduce((acc, e) => acc + getMonthlyCost(e), 0);
-      const antMonthly = expenses.filter(e => e.isAnt).reduce((acc, e) => acc + getMonthlyCost(e), 0);
-      const totalAnnual = totalMonthly * 12;
-      const antAnnual = antMonthly * 12;
-      const antShare = totalMonthly > 0 ? (antMonthly / totalMonthly) * 100 : 0;
-      const antCount = expenses.filter(e => e.isAnt).length;
-
-      document.getElementById("kpiMonthlyTotal").textContent = formatCurrency(totalMonthly);
-      document.getElementById("kpiAnnualTotal").textContent = formatCurrency(totalAnnual);
-      document.getElementById("kpiMonthlyAnt").textContent = formatCurrency(antMonthly);
-      document.getElementById("kpiAntShareBadge").textContent = `${antShare.toFixed(1)}% del mes`;
-      document.getElementById("kpiAntCountText").textContent = `${antCount} partidas hormiga activas`;
-      document.getElementById("kpiAnnualSavings").textContent = formatCurrency(antAnnual);
-      document.getElementById("kpiHalfSavingsText").textContent = `O ahorra ${formatCurrency(antAnnual * 0.5)} al año reduciendo el 50%`;
-
-      const globalPct = budgets.global > 0 ? (totalMonthly / budgets.global) * 100 : 0;
-      const budgetStatusEl = document.getElementById("kpiBudgetStatus");
-      budgetStatusEl.textContent = `${globalPct.toFixed(0)}% del presupuesto global (${formatCurrency(budgets.global)})`;
-      budgetStatusEl.className = globalPct >= 100
-        ? "text-xs font-semibold text-rose-600 mt-1"
-        : globalPct >= 75
-          ? "text-xs font-semibold text-amber-600 mt-1"
-          : "text-xs text-emerald-700 mt-1";
-
-      renderExpensesTable();
-      renderSankeyDiagram();
-      renderAnalyticsCharts();
-      renderSimulatorView(antMonthly);
-      renderBudgetsView(totalMonthly);
-    }
-
-    // =========================================================
-    // VISTA 1: TABLA DE MOVIMIENTOS Y FORMULARIO REACTIVO
-    // =========================================================
-    function updateLiveFormRulePreview() {
-      const unitAmount = parseFloat(document.getElementById("expAmount").value) || 0;
-      const freqPerWeek = parseFloat(document.getElementById("expFreq").value) || 0.25;
-      const category = document.getElementById("expCategory").value;
-      const type = document.getElementById("expType").value;
-
-      const multiplier = freqPerWeek === 0.25 ? 1 : freqPerWeek * 4;
-      const monthlyImpact = unitAmount * multiplier;
-      document.getElementById("liveMonthlyImpact").textContent = `${formatCurrency(monthlyImpact)} / mes`;
-
-      const evalResult = evaluateAntRule(unitAmount, freqPerWeek, category, type);
-      const box = document.getElementById("rulePreviewBox");
-      const badge = document.getElementById("ruleBadgeText");
-      const reason = document.getElementById("ruleReasonText");
-      const checkbox = document.getElementById("expManualOverride");
-
-      checkbox.checked = evalResult.isAutoAnt;
-      reason.textContent = evalResult.reason;
-
-      if (evalResult.isAutoAnt) {
-        box.className = "rounded-xl p-3 bg-rose-50 border border-rose-200 space-y-2";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-rose-600 text-white";
-        badge.textContent = "GASTO HORMIGA DETECTADO";
-      } else {
-        box.className = "rounded-xl p-3 bg-emerald-50 border border-emerald-200 space-y-2";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-700 text-white";
-        badge.textContent = "GASTO ESENCIAL / REGULAR";
-      }
-    }
-
-    function renderExpensesTable() {
-      const mode = document.getElementById("filterMode").value;
-      const payFilter = document.getElementById("filterPayment").value;
-      const tbody = document.getElementById("expensesTableBody");
-      tbody.innerHTML = "";
-
-      const filtered = expenses.filter(e => {
-        if (mode === "ant" && !e.isAnt) return false;
-        if (mode === "sub" && e.type !== "Suscripción") return false;
-        if (mode === "essential" && e.isAnt) return false;
-        if (payFilter !== "all" && e.payment !== payFilter) return false;
-        return true;
-      });
-
-      if (filtered.length === 0) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="6" class="py-6 text-center text-slate-400">No hay gastos que coincidan con el filtro seleccionado.</td>`;
-        tbody.appendChild(tr);
-        return;
-      }
-
-      filtered.forEach(exp => {
-        const monthlyCost = getMonthlyCost(exp);
-        const freqLabel = exp.freqPerWeek === 0.25 ? "Mensual (1x/mes)" : `${exp.freqPerWeek}x/sem (${formatCurrency(exp.unitAmount)})`;
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50 transition";
-
-        tr.innerHTML = `
-          <td class="py-2.5 px-3">
-            <div class="font-semibold text-slate-800">${exp.concept}</div>
-            <div class="text-[11px] text-slate-500">${exp.type} • ${freqLabel} • <span class="text-slate-600">${exp.ruleReason}</span></div>
-          </td>
-          <td class="py-2.5 px-2 text-slate-700">${exp.category}</td>
-          <td class="py-2.5 px-2">
-            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">${exp.payment}</span>
-          </td>
-          <td class="py-2.5 px-2 text-right font-bold text-slate-900">${formatCurrency(monthlyCost)}</td>
-          <td class="py-2.5 px-2 text-center">
-            <button type="button" data-toggle-id="${exp.id}" class="toggle-ant-btn px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
-              exp.isAnt
-                ? "bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-300"
-                : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300"
-            }">
-              ${exp.isAnt ? "🐜 Gasto Hormiga" : "✅ Esencial"}
-            </button>
-          </td>
-          <td class="py-2.5 px-2 text-center">
-            <button type="button" data-delete-id="${exp.id}" class="delete-exp-btn text-slate-400 hover:text-rose-600 font-bold px-2 py-1" title="Eliminar registro">
-              ✕
-            </button>
-          </td>
+        const rowHtml = `
+          <div class="flex items-center justify-between bg-[#123540] border border-[#1E4E5D] rounded-xl px-3.5 py-2.5">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-sm"
+                   style="background-color: ${badgeBg}; color: ${badgeColor};">
+                $
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-white">${item.concept}</div>
+                <div class="text-xs text-white/60">${item.subtitle}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-bold text-white">${sign}${formatClp(item.amountClp)}</div>
+              <div class="text-[11px] text-white/60">CLP</div>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
-      });
-
-      // Attach listeners for toggle and delete
-      tbody.querySelectorAll(".toggle-ant-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = parseInt(btn.getAttribute("data-toggle-id"), 10);
-          const item = expenses.find(x => x.id === id);
-          if (item) {
-            item.isAnt = !item.isAnt;
-            item.ruleReason = item.isAnt ? "RN-01: Etiquetado Manualmente como Hormiga" : "RN-01: Marcado Manualmente como Esencial";
-            updateAllViews();
-            showToast(`Clasificación actualizada para «${item.concept}»`, item.isAnt ? "🐜" : "✅");
-          }
-        });
-      });
-
-      tbody.querySelectorAll(".delete-exp-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = parseInt(btn.getAttribute("data-delete-id"), 10);
-          expenses = expenses.filter(x => x.id !== id);
-          updateAllViews();
-          showToast("Registro eliminado y estadísticas recalculadas", "🗑️");
-        });
+        mobileList.insertAdjacentHTML('beforeend', rowHtml);
+        desktopList.insertAdjacentHTML('beforeend', rowHtml);
       });
     }
 
-    // =========================================================
-    // VISTA 2: DIAGRAMA DE SANKEY (SVG) Y ANILLOS / % FUGA
-    // =========================================================
-    function renderSankeyDiagram() {
-      const svg = document.getElementById("sankeySvg");
-      if (!svg) return;
-      svg.innerHTML = "";
-
-      const totalMonthly = expenses.reduce((acc, e) => acc + getMonthlyCost(e), 0);
-      if (totalMonthly <= 0) return;
-
-      const categories = [
-        "Vivienda y Servicios",
-        "Alimentación y Supermercado",
-        "Transporte y Movilidad",
-        "Micro-compras y Snacks",
-        "Suscripciones de Entretenimiento"
+    function renderDonutChart() {
+      const ctx = document.getElementById('categoryDonutCanvas');
+      if (!ctx) return;
+      const dataCategories = [
+        { label: 'Alimentación', amount: 195000 },
+        { label: 'Transporte', amount: 63750 },
+        { label: 'Hormiga / Snacks', amount: 28250 },
+        { label: 'Streaming', amount: 68000 }
       ];
 
-      const catColors = {
-        "Vivienda y Servicios": "#0F4C5C",
-        "Alimentación y Supermercado": "#0D9488",
-        "Transporte y Movilidad": "#3B82F6",
-        "Micro-compras y Snacks": "#F59E0B",
-        "Suscripciones de Entretenimiento": "#E11D48"
-      };
-
-      const catStats = categories.map(cat => {
-        const items = expenses.filter(e => e.category === cat);
-        const total = items.reduce((a, b) => a + getMonthlyCost(b), 0);
-        const ant = items.filter(e => e.isAnt).reduce((a, b) => a + getMonthlyCost(b), 0);
-        const essential = total - ant;
-        return { name: cat, total, ant, essential, color: catColors[cat] || "#64748B" };
-      }).filter(c => c.total > 0);
-
-      const totalEssential = catStats.reduce((a, b) => a + b.essential, 0);
-      const totalAnt = catStats.reduce((a, b) => a + b.ant, 0);
-
-      const topY = 36;
-      const availH = 280;
-      const scale = availH / totalMonthly;
-
-      // Left node: Total Gasto Mensual
-      const xLeft = 40;
-      const wNode = 22;
-      const xMid = 430;
-      const xRight = 830;
-
-      // Draw Left Node
-      let curLeftY = topY;
-      const leftH = totalMonthly * scale;
-
-      // Middle category nodes with vertical gap
-      const gap = 12;
-      const totalGap = Math.max(0, (catStats.length - 1) * gap);
-      const scaleMid = (availH - totalGap) / totalMonthly;
-
-      let curMidY = topY;
-      catStats.forEach(c => {
-        c.y = curMidY;
-        c.h = Math.max(8, c.total * scaleMid);
-        curMidY += c.h + gap;
-      });
-
-      // Right nodes: Gasto Esencial & Fuga Gasto Hormiga
-      const rightGap = 28;
-      const essentialH = Math.max(12, totalEssential * ((availH - rightGap) / totalMonthly));
-      const antH = Math.max(12, totalAnt * ((availH - rightGap) / totalMonthly));
-      const rightEssY = topY;
-      const rightAntY = topY + essentialH + rightGap;
-
-      // Helper for cubic bezier ribbon
-      function makeRibbonPath(x0, y0, x1, y1, thickness) {
-        const xm = (x0 + x1) / 2;
-        const y0Center = y0 + thickness / 2;
-        const y1Center = y1 + thickness / 2;
-        return {
-          d: `M ${x0} ${y0Center} C ${xm} ${y0Center}, ${xm} ${y1Center}, ${x1} ${y1Center}`,
-          strokeWidth: Math.max(2, thickness)
-        };
-      }
-
-      // Draw links Left -> Middle
-      let leftOffset = topY;
-      catStats.forEach(c => {
-        const thick = c.total * scaleMid;
-        const rib = makeRibbonPath(xLeft + wNode, leftOffset, xMid, c.y, thick);
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", rib.d);
-        path.setAttribute("stroke", c.color);
-        path.setAttribute("stroke-width", rib.strokeWidth);
-        path.setAttribute("stroke-opacity", "0.42");
-        path.setAttribute("class", "sankey-link");
-        svg.appendChild(path);
-        leftOffset += thick;
-      });
-
-      // Draw links Middle -> Right (Essential & Ant)
-      let essOffset = rightEssY;
-      let antOffset = rightAntY;
-      catStats.forEach(c => {
-        let midLocalOffset = c.y;
-        if (c.essential > 0) {
-          const thickEss = (c.essential / c.total) * c.h;
-          const ribEss = makeRibbonPath(xMid + wNode, midLocalOffset, xRight, essOffset, thickEss);
-          const pEss = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          pEss.setAttribute("d", ribEss.d);
-          pEss.setAttribute("stroke", "#10B981");
-          pEss.setAttribute("stroke-width", ribEss.strokeWidth);
-          pEss.setAttribute("stroke-opacity", "0.45");
-          pEss.setAttribute("class", "sankey-link");
-          svg.appendChild(pEss);
-          midLocalOffset += thickEss;
-          essOffset += thickEss;
-        }
-        if (c.ant > 0) {
-          const thickAnt = (c.ant / c.total) * c.h;
-          const ribAnt = makeRibbonPath(xMid + wNode, midLocalOffset, xRight, antOffset, thickAnt);
-          const pAnt = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          pAnt.setAttribute("d", ribAnt.d);
-          pAnt.setAttribute("stroke", "#F43F5E");
-          pAnt.setAttribute("stroke-width", ribAnt.strokeWidth);
-          pAnt.setAttribute("stroke-opacity", "0.55");
-          pAnt.setAttribute("class", "sankey-link");
-          svg.appendChild(pAnt);
-          antOffset += thickAnt;
+      if (donutChart) donutChart.destroy();
+      donutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: dataCategories.map(c => c.label),
+          datasets: [{
+            data: dataCategories.map(c => c.amount),
+            backgroundColor: categoryPalette,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          cutout: '64%',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         }
       });
 
-      // Helper to draw node rect + label
-      function drawNode(x, y, h, color, title, sub, align = "right") {
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", x);
-        rect.setAttribute("y", y);
-        rect.setAttribute("width", wNode);
-        rect.setAttribute("height", Math.max(8, h));
-        rect.setAttribute("rx", "4");
-        rect.setAttribute("fill", color);
-        svg.appendChild(rect);
-
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        const tx = align === "right" ? x + wNode + 8 : x - 8;
-        text.setAttribute("x", tx);
-        text.setAttribute("y", y + Math.max(8, h) / 2 - 2);
-        text.setAttribute("text-anchor", align === "right" ? "start" : "end");
-        text.setAttribute("font-size", "11");
-        text.setAttribute("font-weight", "700");
-        text.setAttribute("fill", "#0F172A");
-        text.textContent = title;
-        svg.appendChild(text);
-
-        const subText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        subText.setAttribute("x", tx);
-        subText.setAttribute("y", y + Math.max(8, h) / 2 + 12);
-        subText.setAttribute("text-anchor", align === "right" ? "start" : "end");
-        subText.setAttribute("font-size", "10");
-        subText.setAttribute("fill", "#475569");
-        subText.textContent = sub;
-        svg.appendChild(subText);
-      }
-
-      drawNode(xLeft, curLeftY, leftH * 0.9, "#0F4C5C", "Gasto Mensual Total", formatCurrency(totalMonthly), "right");
-
-      catStats.forEach(c => {
-        const pct = ((c.total / totalMonthly) * 100).toFixed(0);
-        drawNode(xMid, c.y, c.h, c.color, c.name, `${formatCurrency(c.total)} (${pct}%)`, "right");
-      });
-
-      const essPct = ((totalEssential / totalMonthly) * 100).toFixed(1);
-      const antPct = ((totalAnt / totalMonthly) * 100).toFixed(1);
-      drawNode(xRight, rightEssY, essentialH, "#10B981", "✅ Gasto Esencial", `${formatCurrency(totalEssential)} (${essPct}%)`, "left");
-      drawNode(xRight, rightAntY, antH, "#E11D48", "🐜 Fuga Gasto Hormiga", `${formatCurrency(totalAnt)} (${antPct}%)`, "left");
+      const legendContainer = document.getElementById('categoryLegendList');
+      legendContainer.innerHTML = dataCategories.map((c, idx) => `
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${categoryPalette[idx]}"></span>
+          <span>${c.label}: <strong>${formatClp(c.amount)}</strong></span>
+        </div>
+      `).join('');
     }
 
-    function renderAnalyticsCharts() {
-      // 1. Category Donut Chart
-      const catTotals = {};
-      expenses.forEach(e => {
-        catTotals[e.category] = (catTotals[e.category] || 0) + getMonthlyCost(e);
-      });
-      const catLabels = Object.keys(catTotals);
-      const catValues = Object.values(catTotals);
+    function updateSimulator() {
+      const antBaseClp = transactionsClp
+        .filter(t => t.isAnt)
+        .reduce((acc, t) => acc + t.amountClp, 0);
 
-      const ctxCat = document.getElementById("categoryDonutChart");
-      if (ctxCat) {
-        if (categoryChartInstance) categoryChartInstance.destroy();
-        categoryChartInstance = new Chart(ctxCat, {
-          type: "doughnut",
-          data: {
-            labels: catLabels,
-            datasets: [{
-              data: catValues,
-              backgroundColor: ["#F59E0B", "#E11D48", "#0D9488", "#0F4C5C", "#3B82F6", "#8B5CF6"],
-              borderWidth: 2,
-              borderColor: "#FFFFFF"
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "62%",
-            plugins: {
-              legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } }
-            }
-          }
-        });
-      }
+      const monthlySavings = Math.round((antBaseClp * selectedSimPercent) / 100);
+      const projectedTotal = monthlySavings * selectedSimMonths;
 
-      // 2. Payment Method Donut & Leakage Percentage List
-      const payStats = {};
-      expenses.forEach(e => {
-        if (!payStats[e.payment]) {
-          payStats[e.payment] = { total: 0, ant: 0 };
-        }
-        const m = getMonthlyCost(e);
-        payStats[e.payment].total += m;
-        if (e.isAnt) payStats[e.payment].ant += m;
-      });
+      document.getElementById('simPercentLabel').textContent = `${selectedSimPercent}%`;
+      document.getElementById('simMonthsLabel').textContent = `${selectedSimMonths} meses`;
+      document.getElementById('simMonthlyClp').textContent = `${formatClp(monthlySavings)} CLP`;
+      document.getElementById('simAnnualClp').textContent = `${formatClp(projectedTotal)} CLP`;
 
-      const payLabels = Object.keys(payStats);
-      const payTotals = payLabels.map(k => payStats[k].total);
-
-      const ctxPay = document.getElementById("paymentDonutChart");
-      if (ctxPay) {
-        if (paymentChartInstance) paymentChartInstance.destroy();
-        paymentChartInstance = new Chart(ctxPay, {
-          type: "doughnut",
-          data: {
-            labels: payLabels,
-            datasets: [{
-              data: payTotals,
-              backgroundColor: ["#0F4C5C", "#10B981", "#F59E0B", "#6366F1", "#EC4899"],
-              borderWidth: 2,
-              borderColor: "#FFFFFF"
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "60%",
-            plugins: {
-              legend: { position: "right", labels: { boxWidth: 12, font: { size: 11 } } }
-            }
-          }
-        });
-      }
-
-      // Render Leakage Percentage Ranking per Payment Method
-      const leakageContainer = document.getElementById("paymentLeakageList");
-      if (leakageContainer) {
-        leakageContainer.innerHTML = "";
-        const sortedPay = payLabels
-          .map(name => {
-            const st = payStats[name];
-            const leakPct = st.total > 0 ? (st.ant / st.total) * 100 : 0;
-            return { name, total: st.total, ant: st.ant, leakPct };
-          })
-          .sort((a, b) => b.leakPct - a.leakPct);
-
-        sortedPay.forEach(item => {
-          const barColor = item.leakPct >= 50 ? "bg-rose-500" : item.leakPct > 0 ? "bg-amber-500" : "bg-emerald-500";
-          const div = document.createElement("div");
-          div.className = "text-xs space-y-1";
-          div.innerHTML = `
-            <div class="flex items-center justify-between">
-              <span class="font-semibold text-slate-800">${item.name} <span class="text-slate-400 font-normal">(Total: ${formatCurrency(item.total)})</span></span>
-              <span class="font-bold ${item.leakPct >= 50 ? "text-rose-600" : "text-slate-700"}">
-                ${item.leakPct.toFixed(1)}% de fuga (${formatCurrency(item.ant)})
-              </span>
-            </div>
-            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div class="${barColor} h-full rounded-full" style="width: ${Math.min(100, item.leakPct)}%"></div>
-            </div>
-          `;
-          leakageContainer.appendChild(div);
-        });
-      }
-    }
-
-    // =========================================================
-    // VISTA 3: SIMULADOR DE AHORRO (25%, 50%, 100% MES A MES Y ANUAL)
-    // =========================================================
-    function renderSimulatorView(antMonthly) {
-      const m25 = antMonthly * 0.25;
-      const m50 = antMonthly * 0.50;
-      const m100 = antMonthly * 1.00;
-
-      document.getElementById("sim25Monthly").textContent = `Ahorro mensual: ${formatCurrency(m25)} / mes`;
-      document.getElementById("sim25Annual").innerHTML = `${formatCurrency(m25 * 12)} <span class="text-xs font-normal text-slate-500">/ año</span>`;
-
-      document.getElementById("sim50Monthly").textContent = `Ahorro mensual: ${formatCurrency(m50)} / mes`;
-      document.getElementById("sim50Annual").innerHTML = `${formatCurrency(m50 * 12)} <span class="text-xs font-normal text-slate-600">/ año</span>`;
-
-      document.getElementById("sim100Monthly").textContent = `Ahorro mensual: ${formatCurrency(m100)} / mes`;
-      document.getElementById("sim100Annual").innerHTML = `${formatCurrency(m100 * 12)} <span class="text-xs font-normal text-slate-500">/ año</span>`;
-
-      // Highlight selected card
-      const cardMap = { 0.25: "simCard25", 0.50: "simCard50", 1.00: "simCard100" };
-      Object.entries(cardMap).forEach(([rate, id]) => {
-        const el = document.getElementById(id);
-        if (Math.abs(parseFloat(rate) - activeSimRate) < 0.01) {
-          el.className = "rounded-xl p-4 border-2 border-emerald-600 bg-emerald-50/50 transition shadow-sm";
+      document.querySelectorAll('.sim-pill-btn').forEach(btn => {
+        const pct = parseInt(btn.getAttribute('data-pct'), 10);
+        if (pct === selectedSimPercent) {
+          btn.className = 'sim-pill-btn py-2 rounded-[10px] text-xs font-bold border border-[#1B9E77] bg-[#1B9E77] text-white transition';
         } else {
-          el.className = "rounded-xl p-4 border border-slate-200 bg-slate-50/70 transition";
+          btn.className = 'sim-pill-btn py-2 rounded-[10px] text-xs font-bold border border-[#1E4E5D] bg-[#0B252E] text-white transition';
         }
       });
-
-      document.getElementById("simActiveLabel").textContent = `Escenario Foco: ${(activeSimRate * 100).toFixed(0)}%`;
-
-      // Month-by-Month table (Mes 1 a Mes 12)
-      const months = ["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6", "Mes 7", "Mes 8", "Mes 9", "Mes 10", "Mes 11", "Mes 12 (Anual)"];
-      const series25 = [];
-      const series50 = [];
-      const series100 = [];
-
-      const simTbody = document.getElementById("simulationTableBody");
-      simTbody.innerHTML = "";
-
-      months.forEach((mName, idx) => {
-        const mNum = idx + 1;
-        const acc25 = m25 * mNum;
-        const acc50 = m50 * mNum;
-        const acc100 = m100 * mNum;
-        series25.push(acc25);
-        series50.push(acc50);
-        series100.push(acc100);
-
-        const tr = document.createElement("tr");
-        tr.className = mNum === 12 ? "bg-emerald-50 font-extrabold border-t-2 border-emerald-300" : "hover:bg-slate-50";
-        tr.innerHTML = `
-          <td class="py-2 px-3 font-semibold text-slate-800">${mName}</td>
-          <td class="py-2 px-2 text-right text-slate-700">${formatCurrency(acc25)}</td>
-          <td class="py-2 px-2 text-right font-bold text-emerald-700">${formatCurrency(acc50)}</td>
-          <td class="py-2 px-3 text-right font-bold text-indigo-700">${formatCurrency(acc100)}</td>
-        `;
-        simTbody.appendChild(tr);
-      });
-
-      const ctxSim = document.getElementById("savingsProjectionChart");
-      if (ctxSim) {
-        if (savingsChartInstance) savingsChartInstance.destroy();
-        savingsChartInstance = new Chart(ctxSim, {
-          type: "line",
-          data: {
-            labels: months.map((_, i) => `M${i + 1}`),
-            datasets: [
-              {
-                label: "Ahorro Reduciendo 100%",
-                data: series100,
-                borderColor: "#4F46E5",
-                backgroundColor: "rgba(79, 70, 229, 0.1)",
-                borderWidth: activeSimRate === 1.0 ? 3.5 : 2,
-                tension: 0.25,
-                fill: false
-              },
-              {
-                label: "Ahorro Reduciendo 50%",
-                data: series50,
-                borderColor: "#059669",
-                backgroundColor: "rgba(5, 150, 105, 0.15)",
-                borderWidth: activeSimRate === 0.5 ? 3.5 : 2,
-                tension: 0.25,
-                fill: true
-              },
-              {
-                label: "Ahorro Reduciendo 25%",
-                data: series25,
-                borderColor: "#0284C7",
-                backgroundColor: "rgba(2, 132, 199, 0.08)",
-                borderWidth: activeSimRate === 0.25 ? 3.5 : 2,
-                tension: 0.25,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: "top", labels: { boxWidth: 12, font: { size: 11 } } }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function(value) { return "$" + value; }
-                }
-              }
-            }
-          }
-        });
-      }
     }
 
-    // =========================================================
-    // VISTA 4: ALERTAS Y PRESUPUESTOS MENSUALES Y POR CATEGORÍA
-    // =========================================================
-    function renderBudgetsView(totalMonthly) {
-      const inputsContainer = document.getElementById("categoryBudgetInputs");
-      const cardsContainer = document.getElementById("budgetStatusCards");
-      if (!inputsContainer || !cardsContainer) return;
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTransactions();
+      renderDonutChart();
+      updateSimulator();
 
-      // Render inputs if empty
-      if (inputsContainer.children.length === 0) {
-        Object.entries(budgets.categories).forEach(([cat, limit]) => {
-          const row = document.createElement("div");
-          row.className = "flex items-center justify-between gap-3 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200";
-          row.innerHTML = `
-            <label class="text-xs font-semibold text-slate-700">${cat}</label>
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs text-slate-400">$</span>
-              <input type="number" step="5" min="10" data-budget-cat="${cat}" value="${limit}"
-                class="cat-budget-input w-24 rounded border border-slate-300 px-2 py-1 text-xs font-bold text-right text-slate-900" />
-            </div>
-          `;
-          inputsContainer.appendChild(row);
+      // Pill buttons (25%, 50%, 100%)
+      document.querySelectorAll('.sim-pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedSimPercent = parseInt(btn.getAttribute('data-pct'), 10);
+          document.getElementById('simPercentSlider').value = selectedSimPercent;
+          updateSimulator();
         });
-      }
-
-      // Compute spent per category and alert count
-      cardsContainer.innerHTML = "";
-      let activeAlertsCount = 0;
-
-      // Global Card first
-      const globalPct = budgets.global > 0 ? (totalMonthly / budgets.global) * 100 : 0;
-      if (globalPct >= 75) activeAlertsCount++;
-
-      const allRows = [
-        { title: "Presupuesto Mensual Global", spent: totalMonthly, limit: budgets.global, pct: globalPct, isGlobal: true }
-      ];
-
-      Object.entries(budgets.categories).forEach(([cat, limit]) => {
-        const spent = expenses.filter(e => e.category === cat).reduce((a, b) => a + getMonthlyCost(b), 0);
-        const pct = limit > 0 ? (spent / limit) * 100 : 0;
-        if (pct >= 75) activeAlertsCount++;
-        allRows.push({ title: cat, spent, limit, pct, isGlobal: false });
       });
 
-      allRows.forEach(r => {
-        let statusLabel = "Controlado";
-        let badgeClass = "bg-emerald-100 text-emerald-800";
-        let barClass = "bg-emerald-500";
-        if (r.pct >= 100) {
-          statusLabel = "🚨 Límite Superado";
-          badgeClass = "bg-rose-100 text-rose-800 border border-rose-300";
-          barClass = "bg-rose-600";
-        } else if (r.pct >= 75) {
-          statusLabel = "⚠️ Alerta Preventiva";
-          badgeClass = "bg-amber-100 text-amber-800 border border-amber-300";
-          barClass = "bg-amber-500";
-        }
-
-        const card = document.createElement("div");
-        card.className = `p-3.5 rounded-xl border ${r.isGlobal ? "bg-slate-50 border-slate-300" : "bg-white border-slate-200"} space-y-2`;
-        card.innerHTML = `
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-bold ${r.isGlobal ? "text-[#0F4C5C] text-sm" : "text-slate-800"}">${r.title}</span>
-            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${badgeClass}">${statusLabel} (${r.pct.toFixed(0)}%)</span>
-          </div>
-          <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
-            <div class="${barClass} h-full rounded-full transition-all duration-300" style="width: ${Math.min(100, r.pct)}%"></div>
-          </div>
-          <div class="flex items-center justify-between text-xs text-slate-600">
-            <span>Gastado: <strong>${formatCurrency(r.spent)}</strong></span>
-            <span>Tope Mensual: <strong>${formatCurrency(r.limit)}</strong></span>
-          </div>
-        `;
-        cardsContainer.appendChild(card);
+      // Sliders
+      document.getElementById('simPercentSlider').addEventListener('input', e => {
+        selectedSimPercent = parseInt(e.target.value, 10);
+        updateSimulator();
       });
 
-      const headerBadge = document.getElementById("headerAlertText");
-      if (headerBadge) {
-        headerBadge.textContent = activeAlertsCount === 1
-          ? "1 alerta de presupuesto activa"
-          : `${activeAlertsCount} alertas de presupuesto activas`;
-      }
-    }
+      document.getElementById('simMonthsSlider').addEventListener('input', e => {
+        selectedSimMonths = parseInt(e.target.value, 10);
+        updateSimulator();
+      });
 
-    // =========================================================
-    // EVENT LISTENERS E INICIALIZACIÓN
-    // =========================================================
-    window.addEventListener("DOMContentLoaded", () => {
-      // Navigation Tabs
-      document.querySelectorAll(".nav-tab-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const target = btn.getAttribute("data-tab");
-          document.querySelectorAll(".nav-tab-btn").forEach(b => {
-            b.className = "nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition text-slate-200 hover:bg-white/10";
+      // NFC Tap-to-Pay action
+      document.getElementById('nfcTapToPayBtn').addEventListener('click', () => {
+        transactionsClp.unshift({
+          concept: 'NFC Tap-to-Pay · Cafetería',
+          subtitle: 'Token HCE HMAC-SHA256 · Gasto hormiga',
+          amountClp: 3200,
+          isAnt: true,
+          isIncome: false
+        });
+        renderTransactions();
+        updateSimulator();
+        showToast('Pago NFC firmado en CLP ($3.200 CLP) con biometría', '📲');
+      });
+
+      // Add demo ant expense button
+      document.getElementById('addDemoAntExpenseBtn').addEventListener('click', () => {
+        transactionsClp.unshift({
+          concept: 'Snack Express & Café',
+          subtitle: 'Microcompras · Billetera NFC',
+          amountClp: 4500,
+          isAnt: true,
+          isIncome: false
+        });
+        renderTransactions();
+        updateSimulator();
+        showToast('Gasto hormiga registrado ($4.500 CLP)', '🐜');
+      });
+
+      // Rail navigation active pill state
+      document.querySelectorAll('.rail-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.rail-btn').forEach(b => {
+            b.className = 'rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/5 transition';
           });
-          btn.className = "nav-tab-btn px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition bg-emerald-600 text-white shadow";
-
-          ["dashboard", "analytics", "simulator", "budgets", "nfc"].forEach(v => {
-            const sec = document.getElementById(`view-${v}`);
-            if (sec) sec.classList.toggle("hidden", v !== target);
-          });
-          updateAllViews();
-        });
-      });
-
-      // Live form rule evaluation
-      ["expAmount", "expFreq", "expCategory", "expType"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", updateLiveFormRulePreview);
-        if (el) el.addEventListener("change", updateLiveFormRulePreview);
-      });
-
-      // Submit new expense
-      document.getElementById("expenseForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const concept = document.getElementById("expConcept").value.trim() || "Nuevo Gasto Registrado";
-        const unitAmount = parseFloat(document.getElementById("expAmount").value) || 1;
-        const type = document.getElementById("expType").value;
-        const category = document.getElementById("expCategory").value;
-        const payment = document.getElementById("expPayment").value;
-        const freqPerWeek = parseFloat(document.getElementById("expFreq").value) || 1;
-        const isAnt = document.getElementById("expManualOverride").checked;
-
-        const evalRule = evaluateAntRule(unitAmount, freqPerWeek, category, type);
-        expenses.unshift({
-          id: nextId++,
-          concept,
-          unitAmount,
-          freqPerWeek,
-          type,
-          category,
-          payment,
-          isAnt,
-          ruleReason: isAnt
-            ? (evalRule.isAutoAnt ? evalRule.reason.replace(" activada", "") : "RN-01: Marcado Manualmente como Hormiga")
-            : "Gasto Esencial"
-        });
-
-        document.getElementById("expConcept").value = "";
-        updateAllViews();
-        showToast(`«${concept}» registrado correctamente en tu cuenta`, isAnt ? "🐜" : "✅");
-      });
-
-      // Filters
-      document.getElementById("filterMode").addEventListener("change", renderExpensesTable);
-      document.getElementById("filterPayment").addEventListener("change", renderExpensesTable);
-
-      // Reset Demo Data
-      document.getElementById("btnResetDemoData").addEventListener("click", () => {
-        expenses = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
-        budgets = JSON.parse(JSON.stringify(INITIAL_BUDGETS));
-        updateAllViews();
-        showToast("Datos de ejemplo restaurados", "🔄");
-      });
-
-      // Simulator Scenario Buttons
-      document.querySelectorAll(".sim-Scenario-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          activeSimRate = parseFloat(btn.getAttribute("data-sim"));
-          document.querySelectorAll(".sim-Scenario-btn").forEach(b => {
-            b.className = "sim-Scenario-btn px-3.5 py-2 rounded-lg text-xs font-bold border border-slate-300 text-slate-700 hover:bg-slate-100 transition";
-          });
-          btn.className = "sim-Scenario-btn px-3.5 py-2 rounded-lg text-xs font-bold border border-emerald-600 bg-emerald-50 text-emerald-800 transition";
-          updateAllViews();
-        });
-      });
-
-      // Save Budgets Button
-      document.getElementById("btnSaveBudgets").addEventListener("click", () => {
-        const gVal = parseFloat(document.getElementById("globalBudgetInput").value);
-        if (gVal > 0) budgets.global = gVal;
-        document.querySelectorAll(".cat-budget-input").forEach(inp => {
-          const cat = inp.getAttribute("data-budget-cat");
-          const val = parseFloat(inp.value);
-          if (cat && val > 0) budgets.categories[cat] = val;
-        });
-        updateAllViews();
-        showToast("Presupuestos actualizados y alertas recalculadas", "🔔");
-      });
-
-      // NFC Wallet Simulator Buttons
-      document.querySelectorAll(".nfc-pay-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const kind = btn.getAttribute("data-nfc");
-          let payloadItem = null;
-          if (kind === "coffee") {
-            payloadItem = {
-              id: nextId++,
-              concept: "Pago NFC: Cafetería Express Contactless",
-              unitAmount: 3200,
-              freqPerWeek: 5,
-              type: "Compra",
-              category: "Micro-compras y Snacks",
-              payment: "Billetera NFC",
-              isAnt: true,
-              ruleReason: "RN-02 (Vía API NFC): Micro-compra >3 veces/sem"
-            };
-          } else if (kind === "streaming") {
-            payloadItem = {
-              id: nextId++,
-              concept: "Pago NFC: Pase Gaming Cloud Mensual",
-              unitAmount: 12990,
-              freqPerWeek: 0.25,
-              type: "Suscripción",
-              category: "Suscripciones de Entretenimiento",
-              payment: "Billetera NFC",
-              isAnt: true,
-              ruleReason: "RN-03 (Vía API NFC): Suscripción de Entretenimiento"
-            };
+          btn.className = 'rail-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold bg-[#1B9E77] text-white transition';
+          const navTarget = btn.getAttribute('data-nav');
+          if (navTarget === 'wallet') {
+            document.getElementById('mobileWalletSection').classList.remove('md:hidden');
           } else {
-            payloadItem = {
-              id: nextId++,
-              concept: "Pago NFC: Mercado Vecinal Contactless",
-              unitAmount: 24500,
-              freqPerWeek: 1,
-              type: "Compra",
-              category: "Alimentación y Supermercado",
-              payment: "Billetera NFC",
-              isAnt: false,
-              ruleReason: "Vía API NFC: Compra Esencial"
-            };
+            document.getElementById('mobileWalletSection').classList.add('md:hidden');
           }
-
-          expenses.unshift(payloadItem);
-
-          const webhookJson = {
-            status: "201_CREATED_AND_CLASSIFIED",
-            timestamp: new Date().toISOString(),
-            source_app: "finANTzas_Mobile_Wallet_NFC",
-            card_token: "tok_visa_nfc_4829",
-            transaction: {
-              concept: payloadItem.concept,
-              unit_amount_clp: payloadItem.unitAmount,
-              weekly_frequency: payloadItem.freqPerWeek,
-              monthly_impact_clp: getMonthlyCost(payloadItem),
-              category: payloadItem.category,
-              payment_method: "Billetera NFC"
-            },
-            rule_engine_output: {
-              classified_as_ant_expense: payloadItem.isAnt,
-              rule_triggered: payloadItem.ruleReason
-            }
-          };
-
-          document.getElementById("nfcStatusBadge").textContent = "HTTP 201 • Sincronizado en Web";
-          document.getElementById("nfcStatusBadge").className = "text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold";
-          document.getElementById("nfcPayloadViewer").textContent = JSON.stringify(webhookJson, null, 2);
-
-          updateAllViews();
-          showToast(`Pago NFC sincronizado automáticamente: ${payloadItem.concept}`, "📲");
         });
       });
 
-      updateLiveFormRulePreview();
-      updateAllViews();
+      // Login Modal controls
+      const loginModal = document.getElementById('loginModal');
+      const openLogin = () => {
+        loginModal.classList.remove('hidden');
+        loginModal.classList.add('flex');
+      };
+      const closeLogin = () => {
+        loginModal.classList.add('hidden');
+        loginModal.classList.remove('flex');
+      };
+
+      document.getElementById('openLoginBtnDesktop').addEventListener('click', openLogin);
+      document.getElementById('openLoginBtnMobile').addEventListener('click', openLogin);
+      document.getElementById('mobSettingsLoginBtn').addEventListener('click', openLogin);
+
+      let registering = false;
+      document.getElementById('toggleAuthModeBtn').addEventListener('click', e => {
+        registering = !registering;
+        document.getElementById('authTitle').textContent = registering ? 'Crear cuenta' : 'Iniciar sesión';
+        e.target.textContent = registering ? 'Ya tengo cuenta' : 'Crear una cuenta nueva';
+      });
+
+      document.getElementById('authForm').addEventListener('submit', e => {
+        e.preventDefault();
+        closeLogin();
+        showToast('Sesión autenticada en finANTzas', '✅');
+      });
     });
   </script>
 </body>

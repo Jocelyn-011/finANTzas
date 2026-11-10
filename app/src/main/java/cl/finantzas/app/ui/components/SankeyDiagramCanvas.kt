@@ -1,5 +1,6 @@
 package cl.finantzas.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,19 +13,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cl.aiep.finantzas.domain.rules.ClpCurrencyFormatter
+import cl.finantzas.app.ui.theme.DarkPetrolBorder
+import cl.finantzas.app.ui.theme.DarkPetrolCard
+import cl.finantzas.app.ui.theme.LocalFinANTzasDarkTheme
 import kotlin.math.roundToInt
 
 internal data class SankeyCategoryFlow(
@@ -34,205 +46,278 @@ internal data class SankeyCategoryFlow(
     val antExpenseClp: Long
 )
 
-private val essentialColor = Color(0xFF18845B)
-private val antExpenseColor = Color(0xFFE45773)
+private val MintIncomeColor = Color(0xFF34D399)
+private val SkyCenterNodeColor = Color(0xFF7DD3FC)
+private val CoralAntNodeColor = Color(0xFFF46036)
+private val SlateBlueRibbonColor = Color(0xFF64748B)
+private val EmeraldSavingsColor = Color(0xFF1B9E77)
 
-/** Draws monthly spending flows with Compose Canvas; all amounts are CLP. */
+/** Draws monthly spending flows with Compose Canvas inside the Dark Petrol "Flujo de Dinero" card; all amounts in CLP without decimals. */
 @Composable
 internal fun SankeyDiagramCanvas(
     categories: List<SankeyCategoryFlow>,
     modifier: Modifier = Modifier
 ) {
+    val isDark = LocalFinANTzasDarkTheme.current
+    val cardBg = if (isDark) DarkPetrolCard else MaterialTheme.colorScheme.surface
+    val borderColor = if (isDark) DarkPetrolBorder else MaterialTheme.colorScheme.outline
+    val textColor = MaterialTheme.colorScheme.onSurface
+
     val positiveCategories = categories.filter { it.totalClp > 0L }
     val total = positiveCategories.sumOf { it.totalClp }
     val essentialTotal = positiveCategories.sumOf { it.essentialClp }
     val antExpenseTotal = positiveCategories.sumOf { it.antExpenseClp }
 
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            "Total mensual: ${ClpCurrencyFormatter.formatClp(total)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Categorías", style = MaterialTheme.typography.labelSmall)
-            Text("Tipo de gasto", style = MaterialTheme.typography.labelSmall)
-        }
-
-        Canvas(Modifier.fillMaxWidth().height(220.dp)) {
-            drawSankeyFlows(positiveCategories, total, essentialTotal, antExpenseTotal)
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            positiveCategories.forEachIndexed { index, category ->
-                SankeyLegendRow(
-                    color = expenseChartColors[index % expenseChartColors.size],
-                    label = category.category.toExpenseCategoryLabel(),
-                    amount = category.totalClp,
-                    total = total
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Flujo de Dinero",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = textColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${ClpCurrencyFormatter.formatClp(total)} CLP",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MintIncomeColor,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            SankeyLegendRow(
-                color = essentialColor,
-                label = "Gasto esencial",
-                amount = essentialTotal,
-                total = total
-            )
-            SankeyLegendRow(
-                color = antExpenseColor,
-                label = "Gasto hormiga",
-                amount = antExpenseTotal,
-                total = total
-            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Ingresos (${ClpCurrencyFormatter.formatClp(total)})",
+                    color = textColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Flujo Central",
+                    color = textColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Gastos / Ahorros",
+                    color = textColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(210.dp)
+            ) {
+                drawThreeStageSankeyFlows(
+                    categories = positiveCategories,
+                    total = total,
+                    antExpenseTotal = antExpenseTotal
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SankeyLegendRow(
+                    color = CoralAntNodeColor,
+                    label = "Gastos / Fuga Hormiga",
+                    amount = antExpenseTotal,
+                    total = total,
+                    textColor = textColor
+                )
+                SankeyLegendRow(
+                    color = EmeraldSavingsColor,
+                    label = "Ahorros / Gasto Esencial",
+                    amount = essentialTotal,
+                    total = total,
+                    textColor = textColor
+                )
+                positiveCategories.forEach { category ->
+                    SankeyLegendRow(
+                        color = MintIncomeColor,
+                        label = category.category.toExpenseCategoryLabel(),
+                        amount = category.totalClp,
+                        total = total,
+                        textColor = textColor
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SankeyLegendRow(color: Color, label: String, amount: Long, total: Long) {
+private fun SankeyLegendRow(
+    color: Color,
+    label: String,
+    amount: Long,
+    total: Long,
+    textColor: Color
+) {
     val percentage = if (total > 0L) {
         ((amount.toDouble() / total.toDouble()) * 100.0).roundToInt()
     } else {
         0
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.dp).background(color))
-        Spacer(Modifier.width(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                color = textColor,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
         Text(
-            "$label: ${ClpCurrencyFormatter.formatClp(amount)} ($percentage%)",
-            style = MaterialTheme.typography.bodySmall
+            text = "${ClpCurrencyFormatter.formatClp(amount)} CLP ($percentage%)",
+            color = textColor,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
 
-private fun DrawScope.drawSankeyFlows(
+private fun DrawScope.drawThreeStageSankeyFlows(
     categories: List<SankeyCategoryFlow>,
     total: Long,
-    essentialTotal: Long,
     antExpenseTotal: Long
 ) {
     if (total <= 0L || size.width <= 0f || size.height <= 0f) return
 
-    val top = 8.dp.toPx()
-    val bottom = size.height - top
-    val plotHeight = (bottom - top).coerceAtLeast(1f)
-    val categoryGap = if (categories.size > 1) 8.dp.toPx() else 0f
-    val categoryGaps = categoryGap * (categories.size - 1).coerceAtLeast(0)
-    val hasEssential = essentialTotal > 0L
-    val hasAntExpense = antExpenseTotal > 0L
-    val typeGap = if (hasEssential && hasAntExpense) 12.dp.toPx() else 0f
-    val reservedGap = maxOf(categoryGaps, typeGap)
-    val flowHeight = (plotHeight - reservedGap).coerceAtLeast(1f)
-    val categoryTop = top + (reservedGap - categoryGaps) / 2f
-    val typeTop = top + (reservedGap - typeGap) / 2f
+    val topPadding = 8.dp.toPx()
+    val plotHeight = (size.height - topPadding * 2f).coerceAtLeast(1f)
+    val barWidth = 8.dp.toPx()
 
-    val categoryX = size.width * 0.06f
-    val categoryWidth = size.width * 0.19f
-    val destinationX = size.width * 0.75f
-    val destinationWidth = size.width * 0.19f
+    val leftX = 4.dp.toPx()
+    val midX = size.width * 0.48f
+    val rightX = size.width - barWidth - 4.dp.toPx()
 
-    var categoryCursor = categoryTop
-    val essentialHeight = flowHeight * safeFraction(essentialTotal, total)
-    val antExpenseHeight = flowHeight * safeFraction(antExpenseTotal, total)
-    var essentialCursor = typeTop
-    var antCursor = typeTop + essentialHeight + typeGap
+    val leftGap = if (categories.size > 1) 10.dp.toPx() else 0f
+    val totalLeftGaps = leftGap * (categories.size - 1).coerceAtLeast(0)
+    val usableLeftHeight = (plotHeight - totalLeftGaps).coerceAtLeast(1f)
+
+    val midHeight = plotHeight * 0.78f
+    val midTop = topPadding + (plotHeight - midHeight) / 2f
+
+    var leftCursor = topPadding
+    var midInCursor = midTop
 
     categories.forEachIndexed { index, category ->
-        val categoryHeight = flowHeight * safeFraction(category.totalClp, total)
-        val nodeTop = categoryCursor
-        val nodeBottom = nodeTop + categoryHeight
-        val color = expenseChartColors[index % expenseChartColors.size]
+        val fraction = safeFraction(category.totalClp, total)
+        val nodeHeight = (usableLeftHeight * fraction).coerceAtLeast(6.dp.toPx())
+        val targetMidHeight = (midHeight * fraction).coerceAtLeast(4.dp.toPx())
 
-        var categoryFlowCursor = nodeTop
-        val categoryEssentialHeight = if (category.totalClp > 0L) {
-            categoryHeight * safeFraction(category.essentialClp, category.totalClp)
-        } else 0f
-        val categoryAntHeight = (categoryHeight - categoryEssentialHeight).coerceAtLeast(0f)
-
-        if (category.essentialClp > 0L && categoryEssentialHeight > 0f) {
-            val targetHeight = flowHeight * safeFraction(category.essentialClp, total)
-            drawSankeyRibbon(
-                startX = categoryX + categoryWidth,
-                endX = destinationX,
-                startTop = categoryFlowCursor,
-                startBottom = categoryFlowCursor + categoryEssentialHeight,
-                endTop = essentialCursor,
-                endBottom = essentialCursor + targetHeight,
-                color = essentialColor.copy(alpha = 0.54f)
-            )
-            categoryFlowCursor += categoryEssentialHeight
-            essentialCursor += targetHeight
+        val ribbonColor = if (index % 2 == 0) {
+            SkyCenterNodeColor.copy(alpha = 0.38f)
+        } else {
+            EmeraldSavingsColor.copy(alpha = 0.45f)
         }
 
-        if (category.antExpenseClp > 0L && categoryAntHeight > 0f) {
-            val targetHeight = flowHeight * safeFraction(category.antExpenseClp, total)
-            drawSankeyRibbon(
-                startX = categoryX + categoryWidth,
-                endX = destinationX,
-                startTop = categoryFlowCursor,
-                startBottom = categoryFlowCursor + categoryAntHeight,
-                endTop = antCursor,
-                endBottom = antCursor + targetHeight,
-                color = antExpenseColor.copy(alpha = 0.58f)
-            )
-            antCursor += targetHeight
-        }
+        drawSankeyRibbon(
+            startX = leftX + barWidth,
+            endX = midX,
+            startTop = leftCursor,
+            startBottom = leftCursor + nodeHeight,
+            endTop = midInCursor,
+            endBottom = midInCursor + targetMidHeight,
+            color = ribbonColor
+        )
 
         drawRoundRect(
-            color = color,
-            topLeft = androidx.compose.ui.geometry.Offset(categoryX, nodeTop),
-            size = androidx.compose.ui.geometry.Size(categoryWidth, categoryHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(5.dp.toPx()),
+            color = MintIncomeColor,
+            topLeft = Offset(leftX, leftCursor),
+            size = Size(barWidth, nodeHeight),
+            cornerRadius = CornerRadius(3.dp.toPx()),
             style = Fill
         )
-        drawRoundRect(
-            color = Color.White,
-            topLeft = androidx.compose.ui.geometry.Offset(categoryX, nodeTop),
-            size = androidx.compose.ui.geometry.Size(categoryWidth, categoryHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(5.dp.toPx()),
-            style = Stroke(width = 1.5.dp.toPx())
-        )
-        categoryCursor = nodeBottom + categoryGap
+
+        leftCursor += nodeHeight + leftGap
+        midInCursor += targetMidHeight
     }
 
-    if (essentialHeight > 0f) {
-        drawRoundRect(
-            color = essentialColor,
-            topLeft = androidx.compose.ui.geometry.Offset(destinationX, typeTop),
-            size = androidx.compose.ui.geometry.Size(destinationWidth, essentialHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(7.dp.toPx()),
-            style = Fill
-        )
-        drawRoundRect(
-            color = Color.White,
-            topLeft = androidx.compose.ui.geometry.Offset(destinationX, typeTop),
-            size = androidx.compose.ui.geometry.Size(destinationWidth, essentialHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(7.dp.toPx()),
-            style = Stroke(width = 1.5.dp.toPx())
-        )
-    }
-    if (antExpenseHeight > 0f) {
-        val antTop = typeTop + essentialHeight + typeGap
-        drawRoundRect(
-            color = antExpenseColor,
-            topLeft = androidx.compose.ui.geometry.Offset(destinationX, antTop),
-            size = androidx.compose.ui.geometry.Size(destinationWidth, antExpenseHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(7.dp.toPx()),
-            style = Fill
-        )
-        drawRoundRect(
-            color = Color.White,
-            topLeft = androidx.compose.ui.geometry.Offset(destinationX, antTop),
-            size = androidx.compose.ui.geometry.Size(destinationWidth, antExpenseHeight.coerceAtLeast(1f)),
-            cornerRadius = CornerRadius(7.dp.toPx()),
-            style = Stroke(width = 1.5.dp.toPx())
-        )
-    }
+    val rightGap = 16.dp.toPx()
+    val usableRightHeight = (plotHeight - rightGap).coerceAtLeast(1f)
+
+    val antFraction = safeFraction(antExpenseTotal, total).coerceIn(0.15f, 0.85f)
+    val essentialFraction = (1f - antFraction).coerceIn(0.15f, 0.85f)
+
+    val topOutHeight = usableRightHeight * antFraction
+    val bottomOutHeight = usableRightHeight * essentialFraction
+
+    val midAntHeight = midHeight * antFraction
+    val midEssentialHeight = midHeight - midAntHeight
+
+    drawSankeyRibbon(
+        startX = midX + barWidth,
+        endX = rightX,
+        startTop = midTop,
+        startBottom = midTop + midAntHeight,
+        endTop = topPadding,
+        endBottom = topPadding + topOutHeight,
+        color = SlateBlueRibbonColor.copy(alpha = 0.45f)
+    )
+    drawRoundRect(
+        color = CoralAntNodeColor,
+        topLeft = Offset(rightX, topPadding),
+        size = Size(barWidth, topOutHeight),
+        cornerRadius = CornerRadius(3.dp.toPx()),
+        style = Fill
+    )
+
+    val bottomOutTop = topPadding + topOutHeight + rightGap
+    drawSankeyRibbon(
+        startX = midX + barWidth,
+        endX = rightX,
+        startTop = midTop + midAntHeight,
+        startBottom = midTop + midAntHeight + midEssentialHeight,
+        endTop = bottomOutTop,
+        endBottom = bottomOutTop + bottomOutHeight,
+        color = EmeraldSavingsColor.copy(alpha = 0.55f)
+    )
+    drawRoundRect(
+        color = EmeraldSavingsColor,
+        topLeft = Offset(rightX, bottomOutTop),
+        size = Size(barWidth, bottomOutHeight),
+        cornerRadius = CornerRadius(3.dp.toPx()),
+        style = Fill
+    )
+
+    drawRoundRect(
+        color = SkyCenterNodeColor,
+        topLeft = Offset(midX, midTop),
+        size = Size(barWidth, midHeight),
+        cornerRadius = CornerRadius(3.dp.toPx()),
+        style = Fill
+    )
 }
 
 private fun DrawScope.drawSankeyRibbon(
@@ -259,8 +344,10 @@ private fun safeFraction(amount: Long, total: Long): Float =
     if (total > 0L) (amount.coerceAtLeast(0L).toDouble() / total.toDouble()).toFloat() else 0f
 
 internal fun String.toExpenseCategoryLabel(): String = when (uppercase()) {
-    "MICRO_PURCHASES_AND_SNACKS" -> "Microcompras y snacks"
+    "HOUSING_AND_UTILITIES" -> "Vivienda y servicios"
     "FOOD_AND_GROCERIES" -> "Alimentación y supermercado"
+    "TRANSPORT_AND_MOBILITY" -> "Transporte y movilidad"
+    "MICRO_PURCHASES_AND_SNACKS" -> "Microcompras y snacks"
     "ENTERTAINMENT_SUBSCRIPTIONS" -> "Suscripciones de entretenimiento"
     else -> replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
 }
