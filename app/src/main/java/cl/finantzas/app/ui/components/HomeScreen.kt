@@ -419,7 +419,7 @@ fun HomeScreen(
                         color = textColor
                     )
                     Text(
-                        text = "Ir a Insights →",
+                        text = "Ir a Análisis →",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MintBright,
