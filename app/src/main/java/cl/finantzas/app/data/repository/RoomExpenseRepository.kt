@@ -25,19 +25,23 @@ class RoomExpenseRepository(
     ): Flow<Long> =
         expenseDao.getTotalMonthlyImpactClp(userId).distinctUntilChanged()
 
+    override suspend fun restoreDemoExpenses(userId: String) {
+        expenseDao.restoreDemoExpenses(userId, cl.finantzas.app.data.demo.ExpenseDemoDataClp.create(userId))
+    }
+
     override suspend fun insert(expense: ExpenseEntityClp) {
         require(expense.unitAmountClp > 0L)
         require(expense.monthlyImpactClp > 0L)
-        expenseDao.insert(expense)
+        expenseDao.insertForOwner(expense)
     }
 
     override suspend fun update(expense: ExpenseEntityClp) {
         require(expense.unitAmountClp > 0L)
         require(expense.monthlyImpactClp > 0L)
-        expenseDao.update(expense)
+        expenseDao.updateForOwner(expense)
     }
 
     override suspend fun delete(expense: ExpenseEntityClp) {
-        expenseDao.delete(expense)
+        expenseDao.deleteForOwner(expense)
     }
 }

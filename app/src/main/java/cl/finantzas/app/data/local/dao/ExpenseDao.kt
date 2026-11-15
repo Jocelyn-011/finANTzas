@@ -15,6 +15,28 @@ interface ExpenseDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(expense: ExpenseEntityClp)
 
+    @Query("SELECT user_id FROM expenses WHERE id = :expenseId LIMIT 1")
+    suspend fun getExpenseOwner(expenseId: String): String?
+
+    @Transaction
+    suspend fun insertForOwner(expense: ExpenseEntityClp) {
+        val owner = getExpenseOwner(expense.id)
+        require(owner == null || owner == expense.userId)
+        insert(expense)
+    }
+
+    @Transaction
+    suspend fun updateForOwner(expense: ExpenseEntityClp) {
+        require(getExpenseOwner(expense.id) == expense.userId)
+        update(expense)
+    }
+
+    @Transaction
+    suspend fun deleteForOwner(expense: ExpenseEntityClp) {
+        require(getExpenseOwner(expense.id) == expense.userId)
+        delete(expense)
+    }
+
     @Update
     suspend fun update(expense: ExpenseEntityClp)
 
@@ -35,6 +57,12 @@ interface ExpenseDao {
 
     @Transaction
     suspend fun restoreDemoExpenses(userId: String, demoExpenses: List<ExpenseEntityClp>) {
+        require(userId == cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER)
+        require(demoExpenses.all { it.userId == userId && it.id.startsWith("demo-") })
+        require(demoExpenses.all { expense ->
+            val existing = getExpenseOwner(expense.id)
+            existing == null || existing == userId
+        })
         deleteDemoExpenses(userId)
         demoExpenses.forEach { insert(it) }
     }

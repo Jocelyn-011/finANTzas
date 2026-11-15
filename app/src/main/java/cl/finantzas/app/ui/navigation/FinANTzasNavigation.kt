@@ -438,22 +438,30 @@ private fun rememberBudgetViewModel(
 )
 
 @Composable
-private fun rememberExpenseViewModel(
+internal fun rememberExpenseViewModel(
     database: FinantzasDatabase,
     userId: String
-): ExpenseViewModel = viewModel(
-    key = "expenses-$userId",
-    factory = object : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return ExpenseViewModel(
-                repository = RoomExpenseRepository(database.expenseDao()),
-                userId = userId,
-                budgetLimitsFlow = BudgetRepository(database.budgetLimitDao()).observe(userId)
-            ) as T
+): ExpenseViewModel {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    return viewModel(
+        key = "expenses-$userId",
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return ExpenseViewModel(
+                    repository = RoomExpenseRepository(database.expenseDao()),
+                    userId = userId,
+                    budgetLimitsFlow = BudgetRepository(database.budgetLimitDao()).observe(userId),
+                    onExpenseChanged = {
+                        if (userId != cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER) {
+                            cl.finantzas.app.workers.ExpenseSyncScheduler.schedule(context)
+                        }
+                    }
+                ) as T
+            }
         }
-    }
-)
+    )
+}
 
 @Composable
 private fun FinANTzasNavHost(

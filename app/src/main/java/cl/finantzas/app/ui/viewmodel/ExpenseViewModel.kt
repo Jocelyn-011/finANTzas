@@ -11,6 +11,7 @@ import cl.finantzas.app.data.local.entity.BudgetLimitEntityClp
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
 import cl.finantzas.app.data.repository.ExpenseReaderRepository
 import cl.finantzas.app.data.repository.budgetDefaults
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,10 +38,46 @@ data class ExpenseDashboardUiState(
 
 class ExpenseViewModel(
     repository: ExpenseReaderRepository,
-    userId: String,
+    val userId: String,
     budgetLimitsFlow: Flow<List<BudgetLimitEntityClp>>,
-    private val budgetEvaluator: BudgetStatusEvaluator = BudgetStatusEvaluator()
+    private val budgetEvaluator: BudgetStatusEvaluator = BudgetStatusEvaluator(),
+    private val writer: cl.finantzas.app.data.repository.ExpenseWriterRepository? =
+        repository as? cl.finantzas.app.data.repository.ExpenseWriterRepository,
+    private val onExpenseChanged: () -> Unit = {}
 ) : ViewModel() {
+
+    private val reader = repository
+
+    suspend fun insert(expense: ExpenseEntityClp) = write(expense, mustExist = false) {
+        insert(expense)
+    }
+
+    suspend fun update(expense: ExpenseEntityClp) = write(expense, mustExist = true) {
+        update(expense)
+    }
+
+    suspend fun delete(expense: ExpenseEntityClp) = write(expense, mustExist = true) {
+        delete(expense)
+    }
+
+    private suspend fun write(
+        expense: ExpenseEntityClp,
+        mustExist: Boolean,
+        operation: suspend cl.finantzas.app.data.repository.ExpenseWriterRepository.() -> Unit
+    ) = viewModelScope.async {
+        require(expense.userId == userId) { "El gasto pertenece a otro usuario." }
+        if (mustExist) {
+            require(reader.getExpenseById(expense.id, userId) != null) { "Gasto no disponible para este usuario." }
+        }
+        checkNotNull(writer).operation()
+        onExpenseChanged()
+    }.await()
+
+    suspend fun restoreDemoExpenses() = viewModelScope.async {
+        require(userId == cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER)
+        checkNotNull(writer).restoreDemoExpenses(userId)
+    }.await()
+
 
     constructor(
         repository: ExpenseReaderRepository,

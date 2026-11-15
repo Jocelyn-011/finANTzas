@@ -27,13 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.aiep.finantzas.domain.rules.AntExpenseRuleEngine
-import cl.finantzas.app.data.demo.ExpenseDemoDataClp
 import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
-import cl.finantzas.app.data.repository.RoomExpenseRepository
 import cl.finantzas.app.ui.theme.EmeraldAccent
 import cl.finantzas.app.ui.viewmodel.ExpenseViewModel
-import cl.finantzas.app.workers.ExpenseSyncScheduler
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -43,14 +40,7 @@ fun ExpenseDemoScreen() {
     val userId = activeExpenseUser()
     val context = LocalContext.current.applicationContext
     val database = remember(context) { SecureDatabaseProvider.getDatabase(context) }
-    val repository = remember(database) { RoomExpenseRepository(database.expenseDao()) }
-    val viewModel = remember(repository, userId) {
-        ExpenseViewModel(
-            repository = repository,
-            userId = userId,
-            budgetLimitsFlow = database.budgetLimitDao().observe(userId)
-        )
-    }
+    val viewModel = cl.finantzas.app.ui.navigation.rememberExpenseViewModel(database, userId)
     ExpenseDemoScreen(viewModel = viewModel)
 }
 
@@ -59,10 +49,7 @@ fun ExpenseDemoScreen(
     viewModel: ExpenseViewModel,
     modifier: Modifier = Modifier
 ) {
-    val userId = activeExpenseUser()
-    val context = LocalContext.current.applicationContext
-    val dao = remember(context) { SecureDatabaseProvider.getDatabase(context).expenseDao() }
-    val repository = remember(dao) { RoomExpenseRepository(dao) }
+    val userId = viewModel.userId
     val expenses by viewModel.expenses.collectAsState()
     val scope = rememberCoroutineScope()
     val ruleEngine = remember { AntExpenseRuleEngine() }
@@ -110,8 +97,7 @@ fun ExpenseDemoScreen(
                     },
                     createdAt = System.currentTimeMillis()
                 )
-                repository.insert(expense)
-                if (userId != LOCAL_EXPENSE_USER) ExpenseSyncScheduler.schedule(context)
+                viewModel.insert(expense)
                 null
             }
         }
@@ -162,10 +148,7 @@ fun ExpenseDemoScreen(
                         )
                         scope.launch {
                             operationError = try {
-                                repository.update(updated)
-                                if (userId != LOCAL_EXPENSE_USER) {
-                                    ExpenseSyncScheduler.schedule(context)
-                                }
+                                viewModel.update(updated)
                                 null
                             } catch (error: CancellationException) {
                                 throw error
@@ -198,10 +181,7 @@ fun ExpenseDemoScreen(
                             restoreError = null
                             scope.launch {
                                 try {
-                                    dao.restoreDemoExpenses(
-                                        userId,
-                                        ExpenseDemoDataClp.create(userId)
-                                    )
+                                    viewModel.restoreDemoExpenses()
                                 } catch (error: CancellationException) {
                                     throw error
                                 } catch (_: Exception) {
@@ -238,7 +218,7 @@ fun ExpenseDemoScreen(
                     onClick = {
                         scope.launch {
                             operationError = try {
-                                repository.delete(expense)
+                                viewModel.delete(expense)
                                 null
                             } catch (error: CancellationException) {
                                 throw error
