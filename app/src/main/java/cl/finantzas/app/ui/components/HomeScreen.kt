@@ -242,7 +242,7 @@ fun HomeScreen(
 
                 LinearProgressIndicator(
                     progress = { progressFraction },
-                    color = EmeraldAccent,
+                    color = statusColor,
                     trackColor = if (isDark) DarkPetrolBg else Color(0xFFE2E8F0),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -263,7 +263,7 @@ fun HomeScreen(
                         text = "$consumedPct%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MintBright
+                        color = statusColor
                     )
                 }
             }

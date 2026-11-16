@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -270,6 +271,7 @@ fun SettingsScreen(
                         // Miniatura Claro
                         ThemePreviewMiniatureCard(
                             title = "Claro",
+                            budgetClp = globalBudgetClp,
                             selected = !FinANTzasThemeState.isDarkTheme,
                             previewBg = FondoClaro,
                             previewCard = Color.White,
@@ -279,6 +281,7 @@ fun SettingsScreen(
                         )
                         // Miniatura Oscuro Petrol
                         ThemePreviewMiniatureCard(
+                            budgetClp = globalBudgetClp,
                             title = "Oscuro Petrol",
                             selected = FinANTzasThemeState.isDarkTheme,
                             previewBg = DarkPetrolBg,
@@ -302,7 +305,7 @@ fun SettingsScreen(
                     SettingsMenuRow(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
-                        subtitle = "Alertas ≥75%, ≥100% y Motor Hormiga (RN-02/RN-03)",
+                        subtitle = "Alertas ≥70%, ≥90% y Motor Hormiga (RN-02/RN-03)",
                         textColor = textColor,
                         onClick = {
                             showBudgetEditorInSheet = false
@@ -369,11 +372,30 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 when (section) {
-                    SettingsSheetSection.EDIT_PROFILE -> {
-                        var nameInput by remember { mutableStateOf(FinANTzasThemeState.userDisplayName) }
-                        var budgetInput by remember { mutableStateOf(globalBudgetClp.toString()) }
 
-                        Text("Editar Perfil y Presupuesto Base (CLP)", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    SettingsSheetSection.EDIT_PROFILE -> {
+                        var nameInput by remember {
+                            mutableStateOf(FinANTzasThemeState.userDisplayName)
+                        }
+
+                        var budgetInput by remember {
+                            mutableStateOf(globalBudgetClp.toString())
+                        }
+
+                        var showBudgetConfirmation by remember {
+                            mutableStateOf(false)
+                        }
+
+                        var budgetError by remember {
+                            mutableStateOf<String?>(null)
+                        }
+
+                        Text(
+                            "Editar Perfil y Presupuesto Base (CLP)",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
                         OutlinedTextField(
                             value = nameInput,
                             onValueChange = { nameInput = it.take(40) },
@@ -381,29 +403,114 @@ fun SettingsScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         OutlinedTextField(
                             value = budgetInput,
-                            onValueChange = { budgetInput = it.filter(Char::isDigit).take(10) },
+                            onValueChange = {
+                                budgetInput = it.filter(Char::isDigit).take(10)
+                                budgetError = null
+                            },
                             label = { Text("Presupuesto Mensual Global ($ CLP)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number
+                            ),
+                            isError = budgetError != null,
+                            supportingText = {
+                                budgetError?.let { Text(it) }
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         Button(
                             onClick = {
-                                if (nameInput.isNotBlank()) {
-                                    FinANTzasThemeState.userDisplayName = nameInput.trim()
-                                }
-                                budgetViewModel.save("GLOBAL", budgetInput)
-                                activeSheet = null
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Perfil y presupuesto CLP actualizados.")
+                                val newBudget = budgetInput.toLongOrNull()
+
+                                if (newBudget == null || newBudget <= 0L) {
+                                    budgetError =
+                                        "Ingresa un presupuesto mayor que cero."
+                                } else {
+                                    budgetError = null
+                                    showBudgetConfirmation = true
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EmeraldAccent,
+                                contentColor = Color.White
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Guardar Cambios", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Guardar Cambios",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (showBudgetConfirmation) {
+                            AlertDialog(
+                                onDismissRequest = {
+                                    showBudgetConfirmation = false
+                                },
+                                title = {
+                                    Text("Confirmar cambio de presupuesto")
+                                },
+                                text = {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            "¿Deseas actualizar tu presupuesto mensual global?"
+                                        )
+
+                                        Text(
+                                            "Presupuesto actual: ${
+                                                ClpCurrencyFormatter.formatClp(globalBudgetClp)
+                                            } CLP"
+                                        )
+
+                                        Text(
+                                            "Nuevo presupuesto: ${
+                                                ClpCurrencyFormatter.formatClp(
+                                                    budgetInput.toLongOrNull() ?: 0L
+                                                )
+                                            } CLP"
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            if (nameInput.isNotBlank()) {
+                                                FinANTzasThemeState.userDisplayName =
+                                                    nameInput.trim()
+                                            }
+
+                                            budgetViewModel.save(
+                                                "GLOBAL",
+                                                budgetInput
+                                            )
+
+                                            showBudgetConfirmation = false
+                                            activeSheet = null
+                                        }
+                                    ) {
+                                        Text("Confirmar cambio")
+                                    }
+                                },
+
+
+                                dismissButton = {
+                                    OutlinedButton(
+                                        onClick = {
+                                            budgetInput = globalBudgetClp.toString()
+                                            budgetError = null
+                                            showBudgetConfirmation = false
+                                        }
+                                    ) {
+                                        Text("Cancelar")
+                                    }
+                                }
+                            )
                         }
                     }
 
@@ -416,14 +523,14 @@ fun SettingsScreen(
                         )
 
                         NotificationSwitchRow(
-                            title = "Alertas preventivas de presupuesto (≥ 75%)",
+                            title = "Alertas preventivas de presupuesto (≥ 70%)",
                             subtitle = "Notifica cuando una categoría alcanza el umbral preventivo.",
                             checked = preventiveAlertsEnabled,
                             onCheckedChange = { preventiveAlertsEnabled = it },
                             textColor = textColor
                         )
                         NotificationSwitchRow(
-                            title = "Alertas críticas de presupuesto excedido (≥ 100%)",
+                            title = "Alertas críticas de presupuesto excedido (≥ 90%)",
                             subtitle = "Notifica inmediatamente cuando se supera el tope mensual en CLP.",
                             checked = criticalAlertsEnabled,
                             onCheckedChange = { criticalAlertsEnabled = it },
@@ -620,9 +727,11 @@ fun SettingsScreen(
     }
 }
 
+
 @Composable
 private fun ThemePreviewMiniatureCard(
     title: String,
+    budgetClp: Long,
     selected: Boolean,
     previewBg: Color,
     previewCard: Color,
@@ -630,6 +739,7 @@ private fun ThemePreviewMiniatureCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
@@ -683,7 +793,7 @@ private fun ThemePreviewMiniatureCard(
                         .background(EmeraldAccent)
                 )
                 Text(
-                    text = "$950.000 CLP",
+                    text = "${ClpCurrencyFormatter.formatClp(budgetClp)} CLP",
                     color = previewText,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
