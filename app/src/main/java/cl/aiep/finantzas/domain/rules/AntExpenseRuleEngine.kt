@@ -13,8 +13,8 @@ object FinancialThresholds {
     const val MONTHLY_FIXED_FREQUENCY_CODE: Int = 0
     const val WEEKS_PER_MONTH_MULTIPLIER: Long = 4L
     const val MONTHS_IN_YEAR: Int = 12
-    const val BUDGET_WARNING_PERCENTAGE: Int = 75
-    const val BUDGET_CRITICAL_PERCENTAGE: Int = 100
+    const val BUDGET_WARNING_PERCENTAGE: Int = 70
+    const val BUDGET_CRITICAL_PERCENTAGE: Int = 90
 }
 
 /**

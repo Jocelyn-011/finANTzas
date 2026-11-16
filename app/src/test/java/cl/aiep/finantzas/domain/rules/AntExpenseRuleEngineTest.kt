@@ -26,8 +26,9 @@ class AntExpenseRuleEngineTest {
         assertEquals(0, FinancialThresholds.MONTHLY_FIXED_FREQUENCY_CODE)
         assertEquals(4L, FinancialThresholds.WEEKS_PER_MONTH_MULTIPLIER)
         assertEquals(12, FinancialThresholds.MONTHS_IN_YEAR)
-        assertEquals(75, FinancialThresholds.BUDGET_WARNING_PERCENTAGE)
-        assertEquals(100, FinancialThresholds.BUDGET_CRITICAL_PERCENTAGE)
+        assertEquals(70, FinancialThresholds.BUDGET_WARNING_PERCENTAGE)
+        assertEquals(90, FinancialThresholds.BUDGET_CRITICAL_PERCENTAGE)
+
     }
 
     @Test

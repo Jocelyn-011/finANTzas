@@ -31,39 +31,69 @@ class BudgetStatusEvaluatorTest {
     // ------------------------------------------------------------------------
     // 1. Análisis de Valores Límite: Umbral Inferior de Alerta (75%)
     // ------------------------------------------------------------------------
+
     @Test
-    fun `cuando ejecucion es 74 porciento retorna estado CONTROLADO Verde sin alerta activa`() {
+    fun `cuando ejecucion es 69 porciento retorna CONTROLADO Verde sin alerta activa`() {
         val evaluation = evaluator.evaluateCategory(
             category = "FOOD_AND_GROCERIES",
-            spentAmountClp = 74_000L,
+            spentAmountClp = 69_000L,
             budgetLimitClp = 100_000L
         )
 
-        assertEquals(74, evaluation.consumedPercentage)
+        assertEquals(69, evaluation.consumedPercentage)
         assertEquals(BudgetHealthStatus.CONTROLADO, evaluation.status)
         assertEquals("Controlado", evaluation.status.displayLabel)
         assertFalse(evaluation.isAlertActive)
     }
 
     @Test
-    fun `cuando ejecucion alcanza 75 porciento exacto retorna ALERTA_PREVENTIVA Ambar`() {
+    fun `cuando ejecucion alcanza 70 porciento retorna ALERTA_PREVENTIVA Ambar`() {
         val evaluation = evaluator.evaluateCategory(
             category = "FOOD_AND_GROCERIES",
-            spentAmountClp = 75_000L,
+            spentAmountClp = 70_000L,
             budgetLimitClp = 100_000L
         )
 
-        assertEquals(75, evaluation.consumedPercentage)
+        assertEquals(70, evaluation.consumedPercentage)
         assertEquals(BudgetHealthStatus.ALERTA_PREVENTIVA, evaluation.status)
         assertEquals("Alerta Preventiva", evaluation.status.displayLabel)
         assertTrue(evaluation.isAlertActive)
     }
 
-    // ------------------------------------------------------------------------
-    // 2. Análisis de Valores Límite: Umbral de Exceso de Presupuesto (100%)
-    // ------------------------------------------------------------------------
     @Test
-    fun `cuando ejecucion es 99 porciento permanece en ALERTA_PREVENTIVA Ambar`() {
+    fun `cuando ejecucion es 89 porciento permanece en ALERTA_PREVENTIVA Ambar`() {
+        val evaluation = evaluator.evaluateCategory(
+            category = "MICRO_PURCHASES_AND_SNACKS",
+            spentAmountClp = 89_000L,
+            budgetLimitClp = 100_000L
+        )
+
+        assertEquals(89, evaluation.consumedPercentage)
+        assertEquals(BudgetHealthStatus.ALERTA_PREVENTIVA, evaluation.status)
+        assertEquals("Alerta Preventiva", evaluation.status.displayLabel)
+        assertTrue(evaluation.isAlertActive)
+    }
+
+    @Test
+    fun `cuando ejecucion alcanza 90 porciento retorna PRESUPUESTO_EXCEDIDO Coral`() {
+        val evaluation = evaluator.evaluateCategory(
+            category = "ENTERTAINMENT_SUBSCRIPTIONS",
+            spentAmountClp = 90_000L,
+            budgetLimitClp = 100_000L
+        )
+
+        assertEquals(90, evaluation.consumedPercentage)
+        assertEquals(BudgetHealthStatus.PRESUPUESTO_EXCEDIDO, evaluation.status)
+        assertEquals("Presupuesto Excedido", evaluation.status.displayLabel)
+        assertTrue(evaluation.isAlertActive)
+    }
+
+    // ------------------------------------------------------------------------
+    // 2. Análisis de Valores Límite: Umbral de Exceso de Presupuesto (90%)
+    // ------------------------------------------------------------------------
+
+    @Test
+    fun `cuando ejecucion es 99 porciento retorna PRESUPUESTO_EXCEDIDO Coral`() {
         val evaluation = evaluator.evaluateCategory(
             category = "MICRO_PURCHASES_AND_SNACKS",
             spentAmountClp = 99_000L,
@@ -71,8 +101,14 @@ class BudgetStatusEvaluatorTest {
         )
 
         assertEquals(99, evaluation.consumedPercentage)
-        assertEquals(BudgetHealthStatus.ALERTA_PREVENTIVA, evaluation.status)
-        assertEquals("Alerta Preventiva", evaluation.status.displayLabel)
+        assertEquals(
+            BudgetHealthStatus.PRESUPUESTO_EXCEDIDO,
+            evaluation.status
+        )
+        assertEquals(
+            "Presupuesto Excedido",
+            evaluation.status.displayLabel
+        )
         assertTrue(evaluation.isAlertActive)
     }
 
