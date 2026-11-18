@@ -50,6 +50,7 @@ import cl.finantzas.app.ui.theme.DarkPetrolCard
 import cl.finantzas.app.ui.theme.EmeraldAccent
 import cl.finantzas.app.ui.theme.LocalFinANTzasDarkTheme
 import cl.finantzas.app.ui.theme.MintBright
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 private val expenseCategories = listOf(
@@ -97,7 +98,7 @@ fun ExpenseRegistrationForm(
 
     val amount = amountText.toLongOrNull() ?: 0L
     val frequency = frequencyCode.toIntOrNull() ?: 0
-    val type = if (frequency == 0 || category == ExpenseCategory.ENTERTAINMENT_SUBSCRIPTIONS) {
+    val type = if ((frequency == 0) || (category == ExpenseCategory.ENTERTAINMENT_SUBSCRIPTIONS)) {
         ExpenseType.SUBSCRIPTION
     } else {
         ExpenseType.PURCHASE
@@ -116,17 +117,16 @@ fun ExpenseRegistrationForm(
     val verdict = remember(candidate) { ruleEngine.evaluate(candidate) }
 
     // Pre-activar automáticamente si el motor detecta RN-02 o RN-03, permitiendo override manual RN-01
-    LaunchedEffect(verdict.isAntExpense, verdict.triggeredRuleCode) {
+    LaunchedEffect(verdict.isAntExpense, verdict.triggeredRuleCode, userTouchedAntSwitch) {
         if (!userTouchedAntSwitch) {
             isAntSwitchChecked = verdict.isAntExpense
         }
     }
 
-    val effectiveRuleCode = when {
-        isAntSwitchChecked && verdict.isAntExpense -> verdict.triggeredRuleCode
-        isAntSwitchChecked && !verdict.isAntExpense -> "RN-01"
-        else -> "ESSENTIAL"
-    }
+    // El dominio resuelve el código con el interruptor activo (RN-02/RN-03 tienen prioridad; si no, RN-01).
+    // Se evalúa sobre un copy aparte para no realimentar el LaunchedEffect: `verdict` sigue siendo 100% automático.
+    val confirmedVerdict = remember(candidate) { ruleEngine.evaluate(candidate.copy(userConfirmedAnt = true)) }
+    val effectiveRuleCode = if (isAntSwitchChecked) confirmedVerdict.triggeredRuleCode else "ESSENTIAL"
     val valid = concept.trim().length >= 2 && amount > 0L
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
@@ -174,7 +174,10 @@ fun ExpenseRegistrationForm(
             ) {
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it.filter(Char::isDigit).take(12) },
+                    onValueChange = {
+                        amountText = it.filter(Char::isDigit).take(12)
+                        userTouchedAntSwitch = false // RN-02 depende del monto: el motor vuelve a pre-diagnosticar
+                    },
                     label = { Text("Monto ($)") },
                     prefix = { Text("$ ", color = MintBright, fontWeight = FontWeight.Bold) },
                     suffix = { Text("CLP", color = textColor.copy(alpha = 0.7f), fontSize = 12.sp) },
@@ -240,7 +243,12 @@ fun ExpenseRegistrationForm(
                         color = if (isAntSwitchChecked) CoralHormiga else textColor
                     )
                     Text(
-                        text = "Impacto mensual: ${ClpCurrencyFormatter.formatClp(verdict.monthlyImpactClp)} CLP/mes",
+                        text = if (frequency == 0) {
+                            "Impacto mensual: ${ClpCurrencyFormatter.formatClp(verdict.monthlyImpactClp)} CLP/mes (cargo fijo)"
+                        } else {
+                            "Impacto mensual: ${ClpCurrencyFormatter.formatClp(amount)} × $frequency × 4 = " +
+                                "${ClpCurrencyFormatter.formatClp(verdict.monthlyImpactClp)} CLP/mes"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = textColor.copy(alpha = 0.75f)
                     )
@@ -267,9 +275,14 @@ fun ExpenseRegistrationForm(
                     scope.launch {
                         isSaving = true
                         message = null
-                        val finalCandidate = candidate.copy(concept = concept.trim())
+                        val finalCandidate = candidate.copy(
+                            concept = concept.trim(),
+                            userConfirmedAnt = isAntSwitchChecked
+                        )
                         val result = try {
                             onSave(finalCandidate, isAntSwitchChecked)
+                        } catch (error: CancellationException) {
+                            throw error
                         } catch (error: Exception) {
                             error.message ?: "No se pudo guardar el gasto."
                         }

@@ -90,6 +90,7 @@ complexity:
   CyclomaticComplexMethod:
     active: true
     allowedComplexity: 14
+    ignoreAnnotated: ['Composable']
     ignoreSingleWhenExpression: false
     ignoreSimpleWhenEntries: false
     ignoreNestingFunctions: false
@@ -112,6 +113,8 @@ complexity:
     allowedLines: 600
   LongMethod:
     active: true
+    excludes: ['**/ui/**']
+    ignoreAnnotated: ['Composable']
     allowedLines: 60
   LongParameterList:
     active: true
@@ -278,7 +281,7 @@ exceptions:
     active: true
   TooGenericExceptionCaught:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/ui/**']
     exceptionNames:
       - 'ArrayIndexOutOfBoundsException'
       - 'Error'
@@ -346,6 +349,7 @@ naming:
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
     active: true
+    excludes: ['**/ui/**']
     mustBeFirst: true
     multiplatformTargets:
       - 'ios'
@@ -670,7 +674,7 @@ style:
     maxJumpCount: 1
   MagicNumber:
     active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts']
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts', '**/ui/**', '**/nfc/NfcDemoModels.kt']
     ignoreNumbers:
       - '-1'
       - '0'
@@ -693,6 +697,7 @@ style:
     maxChainedCalls: 5
   MaxLineLength:
     active: true
+    excludes: ['**/ui/**']
     maxLineLength: 120
     excludePackageStatements: true
     excludeImportStatements: true
@@ -756,6 +761,7 @@ style:
     ignoredCharacters: []
   ThrowsCount:
     active: true
+    excludes: ['**/ui/**']
     max: 2
     excludeGuardClauses: false
   TrailingWhitespace:

@@ -33,8 +33,8 @@ class FinantzasViewModelTest {
     )
     private val lunch = expense(
         concept = "Colación",
-        unitAmountClp = 3_500L,
-        weeklyFrequency = 3,
+        unitAmountClp = 5_250L, // > $5.000 CLP (esencial)
+        weeklyFrequency = 2,    // < 3 veces/sem ($5.250 * 2 * 4 = $42.000 CLP/mes)
         category = ExpenseCategory.FOOD_AND_GROCERIES
     )
 

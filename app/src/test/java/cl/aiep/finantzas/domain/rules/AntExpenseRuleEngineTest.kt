@@ -21,8 +21,8 @@ class AntExpenseRuleEngineTest {
     // ------------------------------------------------------------------------
     @Test
     fun `debe verificar que las constantes en FinancialThresholds cumplan las reglas de negocio en CLP`() {
-        assertEquals(15_000L, FinancialThresholds.DEFAULT_MICRO_TX_MAX_AMOUNT_CLP)
-        assertEquals(3, FinancialThresholds.MAX_WEEKLY_MICRO_TX_FREQUENCY)
+        assertEquals(5_000L, FinancialThresholds.DEFAULT_MICRO_TX_MAX_AMOUNT_CLP)
+        assertEquals(3, FinancialThresholds.MIN_WEEKLY_ANT_FREQUENCY)
         assertEquals(0, FinancialThresholds.MONTHLY_FIXED_FREQUENCY_CODE)
         assertEquals(4L, FinancialThresholds.WEEKS_PER_MONTH_MULTIPLIER)
         assertEquals(12, FinancialThresholds.MONTHS_IN_YEAR)
@@ -39,7 +39,7 @@ class AntExpenseRuleEngineTest {
     }
 
     // ------------------------------------------------------------------------
-    // 2. Validación de Reglas RN-02 (>3/sem) y RN-03 (Entretenimiento) en CLP
+    // 2. Validación de Reglas RN-02 (>=3/sem, <=5000 CLP) y RN-03 (Entretenimiento) en CLP
     // ------------------------------------------------------------------------
     @Test
     fun `debe clasificar como Gasto Hormiga RN-02 cuando micro-compra de 3500 CLP`() {
@@ -47,7 +47,7 @@ class AntExpenseRuleEngineTest {
         val candidate = ExpenseCandidate(
             concept = "Café de grano camino a clases",
             unitAmountClp = 3_500L, // $3.500 CLP
-            weeklyFrequency = 5,    // 5 veces por semana (> 3/sem)
+            weeklyFrequency = 5,    // 5 veces por semana (>= 3/sem)
             type = ExpenseType.PURCHASE,
             category = ExpenseCategory.MICRO_PURCHASES_AND_SNACKS,
             paymentMethodCode = "CREDIT_CARD"
@@ -63,11 +63,11 @@ class AntExpenseRuleEngineTest {
     }
 
     @Test
-    fun `NO debe clasificar como Gasto Hormiga si la micro-compra se repite 3 veces o menos por semana`() {
+    fun `NO debe clasificar como Gasto Hormiga si la micro-compra se repite menos de 3 veces por semana`() {
         val candidate = ExpenseCandidate(
             concept = "Colación ocasional",
             unitAmountClp = 3_500L,
-            weeklyFrequency = 3, // Exactamente 3 veces/semana (no supera el umbral > 3)
+            weeklyFrequency = 2, // 2 veces/semana (bajo el umbral >= 3)
             type = ExpenseType.PURCHASE,
             category = ExpenseCategory.FOOD_AND_GROCERIES,
             paymentMethodCode = "DEBIT_CARD"
@@ -77,7 +77,92 @@ class AntExpenseRuleEngineTest {
 
         assertFalse(verdict.isAntExpense)
         assertEquals("ESSENTIAL", verdict.triggeredRuleCode)
-        assertEquals(42_000L, verdict.monthlyImpactClp) // $3.500 * 3 * 4 = $42.000 CLP/mes
+        assertEquals(28_000L, verdict.monthlyImpactClp) // $3.500 * 2 * 4 = $28.000 CLP/mes
+    }
+
+    @Test
+    fun `debe clasificar RN-02 en el limite inclusivo de 3 veces por semana y 5000 CLP`() {
+        val verdict = engine.evaluate(
+            ExpenseCandidate(
+                concept = "Café",
+                unitAmountClp = 5_000L,
+                weeklyFrequency = 3,
+                type = ExpenseType.PURCHASE,
+                category = ExpenseCategory.MICRO_PURCHASES_AND_SNACKS,
+                paymentMethodCode = "DEBIT_CARD"
+            )
+        )
+
+        assertTrue(verdict.isAntExpense)
+        assertEquals("RN-02", verdict.triggeredRuleCode)
+        assertEquals(60_000L, verdict.monthlyImpactClp)
+    }
+
+    @Test
+    fun `NO debe clasificar RN-02 una compra frecuente que supera 5000 CLP`() {
+        val verdict = engine.evaluate(
+            ExpenseCandidate(
+                concept = "Supermercado",
+                unitAmountClp = 5_001L,
+                weeklyFrequency = 4,
+                type = ExpenseType.PURCHASE,
+                category = ExpenseCategory.FOOD_AND_GROCERIES,
+                paymentMethodCode = "DEBIT_CARD"
+            )
+        )
+
+        assertFalse(verdict.isAntExpense)
+        assertEquals("ESSENTIAL", verdict.triggeredRuleCode)
+    }
+
+    @Test
+    fun `debe clasificar RN-01 cuando el usuario confirma manualmente un gasto esencial`() {
+        val verdict = engine.evaluate(
+            ExpenseCandidate(
+                concept = "Supermercado",
+                unitAmountClp = 45_000L,
+                weeklyFrequency = 1,
+                type = ExpenseType.PURCHASE,
+                category = ExpenseCategory.FOOD_AND_GROCERIES,
+                paymentMethodCode = "DEBIT_CARD",
+                userConfirmedAnt = true
+            )
+        )
+
+        assertTrue(verdict.isAntExpense)
+        assertEquals("RN-01", verdict.triggeredRuleCode)
+        assertEquals(180_000L, verdict.monthlyImpactClp)
+    }
+
+    @Test
+    fun `debe priorizar reglas automaticas RN-02 y RN-03 por sobre RN-01 cuando userConfirmedAnt es true`() {
+        val rn02Verdict = engine.evaluate(
+            ExpenseCandidate(
+                concept = "Snack",
+                unitAmountClp = 2_000L,
+                weeklyFrequency = 4,
+                type = ExpenseType.PURCHASE,
+                category = ExpenseCategory.MICRO_PURCHASES_AND_SNACKS,
+                paymentMethodCode = "DEBIT_CARD",
+                userConfirmedAnt = true
+            )
+        )
+        val rn03Verdict = engine.evaluate(
+            ExpenseCandidate(
+                concept = "Streaming",
+                unitAmountClp = 12_990L,
+                weeklyFrequency = FinancialThresholds.MONTHLY_FIXED_FREQUENCY_CODE,
+                type = ExpenseType.SUBSCRIPTION,
+                category = ExpenseCategory.ENTERTAINMENT_SUBSCRIPTIONS,
+                paymentMethodCode = "CREDIT_CARD",
+                userConfirmedAnt = true
+            )
+        )
+
+        assertTrue(rn02Verdict.isAntExpense)
+        assertEquals("RN-02", rn02Verdict.triggeredRuleCode)
+        assertTrue(rn03Verdict.isAntExpense)
+        assertEquals("RN-03", rn03Verdict.triggeredRuleCode)
     }
 
     @Test

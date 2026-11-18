@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.aiep.finantzas.domain.rules.AntExpenseRuleEngine
+import cl.aiep.finantzas.domain.rules.ExpenseCandidate
+import cl.aiep.finantzas.domain.rules.ExpenseCategory
+import cl.aiep.finantzas.domain.rules.ExpenseType
 import cl.finantzas.app.data.demo.ExpenseDemoDataClp
 import cl.finantzas.app.data.local.database.SecureDatabaseProvider
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
@@ -85,8 +88,7 @@ fun ExpenseDemoScreen(
         // Mitad Superior: Tarjeta Registrar Nuevo Gasto
         item {
             ExpenseRegistrationForm { candidate, manuallyConfirmedAsAnt ->
-                val verdict = ruleEngine.evaluate(candidate)
-                val finalIsAnt = manuallyConfirmedAsAnt
+                val verdict = ruleEngine.evaluate(candidate.copy(userConfirmedAnt = manuallyConfirmedAsAnt))
                 val expense = ExpenseEntityClp(
                     id = UUID.randomUUID().toString(),
                     userId = userId,
@@ -97,16 +99,12 @@ fun ExpenseDemoScreen(
                     expenseType = candidate.type.name,
                     category = candidate.category.name,
                     paymentMethod = candidate.paymentMethodCode,
-                    isAntExpense = finalIsAnt,
-                    triggeredRuleCode = when {
-                        finalIsAnt && verdict.isAntExpense -> verdict.triggeredRuleCode
-                        finalIsAnt -> "RN-01"
-                        else -> "ESSENTIAL"
-                    },
-                    ruleReason = when {
-                        finalIsAnt && verdict.isAntExpense -> verdict.description.orEmpty()
-                        finalIsAnt -> "Gasto hormiga confirmado manualmente (RN-01)."
-                        else -> "Clasificado como gasto esencial."
+                    isAntExpense = manuallyConfirmedAsAnt,
+                    triggeredRuleCode = if (manuallyConfirmedAsAnt) verdict.triggeredRuleCode else "ESSENTIAL",
+                    ruleReason = if (manuallyConfirmedAsAnt) {
+                        verdict.description.orEmpty()
+                    } else {
+                        "Clasificado como gasto esencial."
                     },
                     createdAt = System.currentTimeMillis()
                 )
@@ -151,11 +149,24 @@ fun ExpenseDemoScreen(
                     expense = expense,
                     onToggleClassification = {
                         val updatedAntStatus = !expense.isAntExpense
+                        val reevaluated = ruleEngine.evaluate(
+                            ExpenseCandidate(
+                                concept = expense.concept,
+                                unitAmountClp = expense.unitAmountClp,
+                                weeklyFrequency = expense.weeklyFrequency,
+                                type = runCatching { ExpenseType.valueOf(expense.expenseType) }
+                                    .getOrDefault(ExpenseType.PURCHASE),
+                                category = runCatching { ExpenseCategory.valueOf(expense.category) }
+                                    .getOrDefault(ExpenseCategory.MICRO_PURCHASES_AND_SNACKS),
+                                paymentMethodCode = expense.paymentMethod,
+                                userConfirmedAnt = updatedAntStatus
+                            )
+                        )
                         val updated = expense.copy(
                             isAntExpense = updatedAntStatus,
-                            triggeredRuleCode = if (updatedAntStatus) "RN-01" else "ESSENTIAL",
+                            triggeredRuleCode = if (updatedAntStatus) reevaluated.triggeredRuleCode else "ESSENTIAL",
                             ruleReason = if (updatedAntStatus) {
-                                "Gasto hormiga confirmado manualmente en la lista (RN-01)."
+                                reevaluated.description.orEmpty()
                             } else {
                                 "Marcado manualmente como gasto esencial."
                             }
@@ -212,7 +223,7 @@ fun ExpenseDemoScreen(
                             }
                         }
                     },
-                    enabled = !restoring && userId == LOCAL_EXPENSE_USER,
+                    enabled = !restoring && (userId == LOCAL_EXPENSE_USER),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = EmeraldAccent,
                         contentColor = Color.White

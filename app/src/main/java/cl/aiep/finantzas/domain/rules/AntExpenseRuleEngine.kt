@@ -8,8 +8,8 @@ import java.util.Locale
  * Constantes de umbrales financieros y reglas de negocio en CLP.
  */
 object FinancialThresholds {
-    const val DEFAULT_MICRO_TX_MAX_AMOUNT_CLP: Long = 15_000L
-    const val MAX_WEEKLY_MICRO_TX_FREQUENCY: Int = 3
+    const val DEFAULT_MICRO_TX_MAX_AMOUNT_CLP: Long = 5_000L
+    const val MIN_WEEKLY_ANT_FREQUENCY: Int = 3
     const val MONTHLY_FIXED_FREQUENCY_CODE: Int = 0
     const val WEEKS_PER_MONTH_MULTIPLIER: Long = 4L
     const val MONTHS_IN_YEAR: Int = 12
@@ -58,7 +58,8 @@ data class ExpenseCandidate(
     val weeklyFrequency: Int,
     val type: ExpenseType,
     val category: ExpenseCategory,
-    val paymentMethodCode: String
+    val paymentMethodCode: String,
+    val userConfirmedAnt: Boolean = false
 )
 
 /**
@@ -78,41 +79,39 @@ fun interface AntExpenseRule {
     fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>?
 }
 
-/**
- * Regla RN-02: Micro-compras frecuentes (>3 veces por semana).
- */
+/** RN-02: micro-compra (1..$5.000 CLP) repetida >= 3 veces/semana. */
 class MicroTransactionFrequencyRule : AntExpenseRule {
-    override fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>? {
-        if (candidate.type == ExpenseType.PURCHASE &&
-            candidate.weeklyFrequency > FinancialThresholds.MAX_WEEKLY_MICRO_TX_FREQUENCY
+    override fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>? =
+        if ((candidate.type == ExpenseType.PURCHASE) &&
+            (candidate.unitAmountClp in 1L..FinancialThresholds.DEFAULT_MICRO_TX_MAX_AMOUNT_CLP) &&
+            (candidate.weeklyFrequency >= FinancialThresholds.MIN_WEEKLY_ANT_FREQUENCY)
         ) {
-            return Triple(
-                true,
-                "RN-02",
-                "Micro-compra frecuente que supera el límite semanal de " +
-                    "${FinancialThresholds.MAX_WEEKLY_MICRO_TX_FREQUENCY} veces"
-            )
+            Triple(true, "RN-02", "Micro-compra ≤ $5.000 CLP repetida ${candidate.weeklyFrequency} veces/sem")
+        } else {
+            null
         }
-        return null
-    }
 }
 
-/**
- * Regla RN-03: Suscripciones de entretenimiento.
- */
+/** RN-03: suscripción digital de entretenimiento con cargo recurrente. */
 class EntertainmentSubscriptionRule : AntExpenseRule {
-    override fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>? {
-        if (candidate.category == ExpenseCategory.ENTERTAINMENT_SUBSCRIPTIONS ||
+    override fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>? =
+        if (candidate.category == ExpenseCategory.ENTERTAINMENT_SUBSCRIPTIONS &&
             candidate.type == ExpenseType.SUBSCRIPTION
         ) {
-            return Triple(
-                true,
-                "RN-03",
-                "Suscripción de entretenimiento clasificada como gasto hormiga"
-            )
+            Triple(true, "RN-03", "Suscripción digital de entretenimiento con cargo recurrente")
+        } else {
+            null
         }
-        return null
-    }
+}
+
+/** RN-01: confirmación manual del usuario (último recurso si ninguna regla automática aplica). */
+class UserConfirmedAntRule : AntExpenseRule {
+    override fun evaluate(candidate: ExpenseCandidate): Triple<Boolean, String, String>? =
+        if (candidate.userConfirmedAnt) {
+            Triple(true, "RN-01", "Confirmado manualmente por el usuario")
+        } else {
+            null
+        }
 }
 
 /**
@@ -121,7 +120,8 @@ class EntertainmentSubscriptionRule : AntExpenseRule {
 class AntExpenseRuleEngine(
     private val rules: List<AntExpenseRule> = listOf(
         MicroTransactionFrequencyRule(),
-        EntertainmentSubscriptionRule()
+        EntertainmentSubscriptionRule(),
+        UserConfirmedAntRule() // Va al final: preserva la prioridad de las reglas automáticas
     )
 ) {
     fun evaluate(candidate: ExpenseCandidate): AntExpenseVerdict {

@@ -140,9 +140,19 @@ class ExpenseViewModel(
                 initialValue = ZERO_ALERTS
             )
 
+    val antAlertsCount: StateFlow<Int> =
+        antExpenses
+            .map { ants -> ants.size }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS),
+                initialValue = ZERO_ALERTS
+            )
+
     val activeAlertsCount: StateFlow<Int> =
-        combine(budgetAlertsCount, antExpenses) { budgetAlerts, ants ->
-            budgetAlerts + ants.size
+        combine(budgetAlertsCount, antAlertsCount) { budgetAlerts, antAlerts ->
+            budgetAlerts + antAlerts
         }
             .distinctUntilChanged()
             .stateIn(
@@ -157,11 +167,14 @@ class ExpenseViewModel(
             projectedAnnualClp,
             antMonthlyClp,
             annualSavingsClp,
-            combine(categoryBudgetEvaluations, antExpenses) { evaluations, ants ->
-                evaluations to ants.size
+            combine(
+                categoryBudgetEvaluations,
+                budgetAlertsCount,
+                antAlertsCount
+            ) { evaluations, budgetAlerts, antAlerts ->
+                Triple(evaluations, budgetAlerts, antAlerts)
             }
-        ) { monthly, annual, antMonthly, savings, (evaluations, antCount) ->
-            val budgetAlerts = evaluations.count { it.isAlertActive }
+        ) { monthly, annual, antMonthly, savings, (evaluations, budgetAlerts, antAlerts) ->
             ExpenseDashboardUiState(
                 totalMonthlyClp = monthly,
                 projectedAnnualClp = annual,
@@ -170,8 +183,8 @@ class ExpenseViewModel(
                 formattedAnnualSavingsClp = ClpCurrencyFormatter.formatClp(savings),
                 budgetEvaluations = evaluations,
                 budgetAlertsCount = budgetAlerts,
-                antAlertsCount = antCount,
-                activeAlertsCount = budgetAlerts + antCount
+                antAlertsCount = antAlerts,
+                activeAlertsCount = budgetAlerts + antAlerts
             )
         }
             .distinctUntilChanged()

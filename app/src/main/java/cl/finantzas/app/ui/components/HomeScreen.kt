@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -315,7 +314,7 @@ fun HomeScreen(
                             }
                         }
                         Text(
-                            text = "${categories.size}",
+                            text = categories.size.toString(),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = textColor
@@ -388,7 +387,11 @@ fun HomeScreen(
                     }
 
                     Text(
-                        text = "${dashboardState.antAlertsCount} alertas detectadas",
+                        text = if (dashboardState.antAlertsCount == 1) {
+                            "1 alerta detectada"
+                        } else {
+                            "${dashboardState.antAlertsCount} alertas detectadas"
+                        },
                         fontSize = 11.sp,
                         color = textColor.copy(alpha = 0.65f)
                     )
