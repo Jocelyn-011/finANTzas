@@ -41,5 +41,8 @@ data class ExpenseEntityClp(
     val ruleReason: String,
 
     @ColumnInfo(name = "created_at")
-    val createdAt: Long
+    val createdAt: Long,
+
+    @ColumnInfo(name = "is_demo", defaultValue = "0")
+    val isDemo: Boolean = false
 )

@@ -18,9 +18,18 @@ import org.junit.Test
 class Fin01ViewModelTest {
     @get:Rule val main = MainDispatcherRule()
 
+    @Test fun demoRowsHaveDistinctIdsAndExplicitOwnership() {
+        val rows = ExpenseDemoDataClp.create("local") + ExpenseDemoDataClp.create("authenticated")
+        assertEquals(8, rows.map { it.id }.toSet().size)
+        assertTrue(rows.all { it.isDemo })
+        assertEquals(setOf("local", "authenticated"), rows.map { it.userId }.toSet())
+    }
+
     private class Repository : ExpenseReaderRepository, ExpenseWriterRepository {
         val rows = MutableStateFlow<List<ExpenseEntityClp>>(emptyList())
         var failWrite = false
+        var restoredUser: String? = null
+        override suspend fun restoreDemoExpenses(userId: String) { restoredUser = userId }
         override fun getExpensesByUser(userId: String) = rows.map { it.filter { row -> row.userId == userId } }
         override fun getTotalMonthlyImpactClp(userId: String) = getExpensesByUser(userId).map { it.sumOf { row -> row.monthlyImpactClp } }
         override suspend fun getExpenseById(expenseId: String, userId: String) = rows.value.find { it.id == expenseId && it.userId == userId }
@@ -47,8 +56,7 @@ class Fin01ViewModelTest {
         for (action in listOf<suspend () -> Unit>(
             { vm.insert(row.copy(userId = "b")) },
             { vm.update(row.copy(userId = "b")) },
-            { vm.delete(row.copy(userId = "b")) },
-            { vm.restoreDemoExpenses() }
+            { vm.delete(row.copy(userId = "b")) }
         )) {
             try { action(); fail("Usuario incorrecto aceptado") }
             catch (_: IllegalArgumentException) { }
@@ -56,6 +64,14 @@ class Fin01ViewModelTest {
         vm.delete(updated)
         runCurrent()
         assertTrue(vm.expenses.value.isEmpty())
+    }
+
+    @Test fun restoreWorksForLocalAndAuthenticatedUsers() = runTest {
+        val repo = Repository()
+        for (user in listOf(cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER, "authenticated")) {
+            ExpenseViewModel(repo, user).restoreDemoExpenses()
+            assertEquals(user, repo.restoredUser)
+        }
     }
 
     @Test fun failedInsertDoesNotChangeHistoryAndCanBeRetried() = runTest {

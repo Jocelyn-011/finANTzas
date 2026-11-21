@@ -192,7 +192,7 @@ fun ExpenseDemoScreen(
                             }
                         }
                     },
-                    enabled = !restoring && userId == LOCAL_EXPENSE_USER,
+                    enabled = !restoring,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = EmeraldAccent,
                         contentColor = Color.White

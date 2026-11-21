@@ -11,7 +11,7 @@ class ExpenseRemoteRepository {
     suspend fun uploadExpenses(expenses: List<ExpenseEntityClp>): Int {
         val user = checkNotNull(client.auth.currentUserOrNull()) { "No hay usuario autenticado" }
 
-        val ownExpenses = expenses.filter { it.userId == user.id }
+        val ownExpenses = expenses.filter { it.userId == user.id && !it.isDemo }
 
         if (ownExpenses.isEmpty()) return 0
 

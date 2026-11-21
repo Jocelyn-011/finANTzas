@@ -74,7 +74,6 @@ class ExpenseViewModel(
     }.await()
 
     suspend fun restoreDemoExpenses() = viewModelScope.async {
-        require(userId == cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER)
         checkNotNull(writer).restoreDemoExpenses(userId)
     }.await()
 

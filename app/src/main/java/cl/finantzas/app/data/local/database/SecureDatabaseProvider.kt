@@ -7,6 +7,12 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 object SecureDatabaseProvider {
 
+    val EXPENSE_DEMO_MIGRATION = object : androidx.room.migration.Migration(2, 3) {
+        override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE expenses ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     val BUDGET_MIGRATION = object : androidx.room.migration.Migration(1, 2) {
         override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
             db.execSQL(
@@ -47,7 +53,7 @@ object SecureDatabaseProvider {
             "finantzas_secure.db"
         )
             .openHelperFactory(factory)
-            .addMigrations(BUDGET_MIGRATION)
+            .addMigrations(BUDGET_MIGRATION, EXPENSE_DEMO_MIGRATION)
             .build()
     }
 }

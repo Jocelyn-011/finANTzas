@@ -52,20 +52,19 @@ interface ExpenseDao {
     @Query("SELECT COALESCE(SUM(monthly_impact_clp), 0) FROM expenses WHERE user_id = :userId")
     fun getTotalMonthlyImpactClp(userId: String): Flow<Long>
 
-    @Query("DELETE FROM expenses WHERE user_id = :userId AND id LIKE 'demo-%'")
+    @Query("DELETE FROM expenses WHERE user_id = :userId AND is_demo = 1")
     suspend fun deleteDemoExpenses(userId: String)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertDemoExpenses(expenses: List<ExpenseEntityClp>)
 
     @Transaction
     suspend fun restoreDemoExpenses(userId: String, demoExpenses: List<ExpenseEntityClp>) {
-        require(userId == cl.finantzas.app.ui.components.LOCAL_EXPENSE_USER)
-        require(demoExpenses.all { it.userId == userId && it.id.startsWith("demo-") })
-        require(demoExpenses.all { expense ->
-            val existing = getExpenseOwner(expense.id)
-            existing == null || existing == userId
-        })
+        require(userId.isNotBlank())
+        require(demoExpenses.all { it.userId == userId && it.isDemo })
         deleteDemoExpenses(userId)
-        demoExpenses.forEach { insert(it) }
+        insertDemoExpenses(demoExpenses)
     }
-    @Query("SELECT * FROM expenses WHERE user_id = :userId ORDER BY created_at ASC")
+    @Query("SELECT * FROM expenses WHERE user_id = :userId AND is_demo = 0 ORDER BY created_at ASC")
     suspend fun getExpensesForSync(userId: String): List<ExpenseEntityClp>
 }

@@ -1,6 +1,7 @@
 package cl.finantzas.app.data.demo
 
 import cl.finantzas.app.data.local.entity.ExpenseEntityClp
+import java.util.UUID
 
 object ExpenseDemoDataClp {
     private const val COFFEE_MONTHLY_CLP = 3500L
@@ -13,7 +14,7 @@ object ExpenseDemoDataClp {
 
         fun expense(concept: String, monthlyAmount: Long, category: String, isAnt: Boolean) =
             ExpenseEntityClp(
-                id = "demo-" + concept.lowercase().replace(" ", "-"),
+                id = UUID.randomUUID().toString(),
                 userId = userId,
                 concept = concept,
                 unitAmountClp = monthlyAmount,
@@ -25,7 +26,8 @@ object ExpenseDemoDataClp {
                 isAntExpense = isAnt,
                 triggeredRuleCode = "",
                 ruleReason = "",
-                createdAt = now
+                createdAt = now,
+                isDemo = true
             )
 
         // Los valores de ClickUp se interpretan como montos mensuales de demostracion.
