@@ -270,13 +270,15 @@ fun ExpenseRegistrationForm(
                         val finalCandidate = candidate.copy(concept = concept.trim())
                         val result = try {
                             onSave(finalCandidate, isAntSwitchChecked)
+                        } catch (error: kotlinx.coroutines.CancellationException) {
+                            throw error
                         } catch (error: Exception) {
                             error.message ?: "No se pudo guardar el gasto."
                         }
                         message = result ?: "Gasto registrado en CLP."
                         if (result == null) {
                             concept = ""
-                            amountText = ""
+                            amountText = "3500"
                             userTouchedAntSwitch = false
                         }
                         isSaving = false

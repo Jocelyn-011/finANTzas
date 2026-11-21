@@ -7,7 +7,7 @@ import cl.finantzas.app.data.local.entity.ExpenseEntityClp
 
 @Database(
     entities = [ExpenseEntityClp::class, cl.finantzas.app.data.local.entity.BudgetLimitEntityClp::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class FinantzasDatabase : RoomDatabase() {
